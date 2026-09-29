@@ -4522,11 +4522,16 @@ select.input::-ms-expand {
 }
 /* Comfortable touch targets: the tiny "×" removers (multi-city leg, tour city chip)
    are ~27px — grow their HIT area to ~44px on coarse pointers without changing the
-   glyph size. */
+   glyph size. The legs editor's text links grow to ~33px tall the same way, their
+   negative margin keeping the row's height. */
 @media (pointer: coarse) {
   .mc-remove,
   .chip-x {
     position: relative;
+  }
+  .mc-actions .linklike {
+    padding-block: 0.55rem;
+    margin-block: -0.55rem;
   }
   .mc-remove::after,
   .chip-x::after {

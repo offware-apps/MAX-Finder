@@ -132,6 +132,16 @@ export function journeyArriveAbs(j: Journey): number {
   return j.departMin + j.totalDurationMin;
 }
 
+/**
+ * The trains or journeys a traveller arriving on `prev` can still catch: those leaving
+ * at least MIN_CONNECTION_MIN after it arrives, across dates. All of them when `prev` is null.
+ */
+export function catchableAfter<T extends { date: string; departMin: number }>(xs: T[], prev: Journey | null): T[] {
+  if (!prev) return xs;
+  const ready = absoluteMinute(prev.date, journeyArriveAbs(prev)) + MIN_CONNECTION_MIN;
+  return xs.filter((x) => absoluteMinute(x.date, x.departMin) >= ready);
+}
+
 function dedupe(journeys: Journey[]): Journey[] {
   const seen = new Set<string>();
   const out: Journey[] = [];

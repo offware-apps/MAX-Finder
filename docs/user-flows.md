@@ -147,10 +147,21 @@ span applied to the lists only, and a day could read green while its list was em
 
 ## Multi-city tab (tour)
 
-- **Custom legs** — spell out each hop (from → to @ date). "Surprise me" fills a random
-  reachable next stop; can build a whole trip from an empty editor.
+- **Custom legs** — spell out each hop (from → to @ date). The results list the legs as a
+  stepper, each defaulting to its fastest train. A leg lists only the trains leaving at
+  least 15 min after the previous leg's pick arrives (`catchableAfter`), with a note when
+  that hides some; re-picking a leg re-lists every later one. A leg with no such train, or
+  dated before the previous arrival, stays open with a notice; every leg keeps its
+  availability calendar, so a day with no train is one tap from another. The trip modal
+  dates each leg. "Surprise me" fills the first row missing its destination (an empty
+  trailing row starts where the previous leg ends) or appends a hop, choosing a direct
+  train that leaves after the previous leg's default arrives, on the first day with one;
+  from an empty editor it starts at a random station, so repeated taps build a whole
+  trip. Search stops on a leg field whose text names no station, flags it and says so.
 - **Tour planner** — add cities to visit (or "Surprise" / "Nearest stop"), set days-per-city;
-  it auto-orders a feasible tour. Save as a tour.
+  it auto-orders a feasible tour. A typed city that names no station stays in the field,
+  flagged, and Search stops on it. Save as a tour; a saved tour opens in a dialog without
+  map actions (the map sits behind it).
 
 ## Ideas tab (best)
 

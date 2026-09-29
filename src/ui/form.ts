@@ -174,6 +174,9 @@ export interface FormHandle {
   updateFieldVisibility(trip: TripType): void;
   refreshTourEndDate(): void;
   setSurpriseMsg(text: string): void;
+  /** The first station field of the active Multi-city surface whose text names no
+   *  station, after flagging every such field. */
+  invalidStation(): HTMLInputElement | undefined;
   /** Tear down date-picker popovers (which live in <body>) before the form is discarded. */
   destroy(): void;
 }
@@ -345,6 +348,8 @@ export function createForm(props: FormProps): FormHandle {
 
     const setLabel = (): void => {
       valueText.textContent = input.value ? props.formatDate(input.value) : t("field_date");
+      // A bare field has no label around it: name the trigger itself.
+      if (bare) trigger.setAttribute("aria-label", input.value ? `${label}: ${valueText.textContent}` : label);
       if (margin > 0) {
         valueBadge.textContent = `±${margin}`;
         valueBadge.removeAttribute("hidden");
@@ -564,6 +569,14 @@ export function createForm(props: FormProps): FormHandle {
     };
   }
 
+  /** Flag a station field whose text names no station; true when it is empty or known. */
+  function checkStation(inp: HTMLInputElement): boolean {
+    const v = inp.value.trim();
+    const bad = v !== "" && !props.resolveStation(v);
+    inp.classList.toggle("is-invalid", bad);
+    return !bad;
+  }
+
   /**
    * Build one multi-city leg row.
    * @param fromVal initial origin label.
@@ -578,12 +591,11 @@ export function createForm(props: FormProps): FormHandle {
     to.value = toVal;
     from.placeholder = t("field_origin");
     to.placeholder = t("field_destination");
+    from.setAttribute("aria-label", t("field_origin"));
+    to.setAttribute("aria-label", t("field_destination"));
     for (const inp of [from, to]) {
       inp.addEventListener("input", () => inp.classList.remove("is-invalid"));
-      inp.addEventListener("change", () => {
-        const v = inp.value.trim();
-        inp.classList.toggle("is-invalid", v !== "" && !props.resolveStation(v));
-      });
+      inp.addEventListener("change", () => checkStation(inp));
     }
     const dateCtl = makeDateField(
       t("field_date"),
@@ -597,7 +609,7 @@ export function createForm(props: FormProps): FormHandle {
       text: "×",
       attrs: { "aria-label": t("leg_remove"), title: t("leg_remove") },
     });
-    const row = el("div", { class: "mc-leg" }, [from, to, dateCtl.root, remove]);
+    const row = el("div", { class: "mc-leg", attrs: { role: "group" } }, [from, to, dateCtl.root, remove]);
     const ctl: LegCtl = { from, to, dateCtl, row, remove };
     remove.addEventListener("click", () => removeLeg(ctl));
     to.addEventListener("change", () => {
@@ -612,7 +624,8 @@ export function createForm(props: FormProps): FormHandle {
     if (!legsContainer) return;
     clear(legsContainer);
     const removable = legRows.length > 2;
-    legRows.forEach((l) => {
+    legRows.forEach((l, i) => {
+      l.row.setAttribute("aria-label", t("leg_n", { n: i + 1 }));
       l.remove.style.display = removable ? "" : "none";
       legsContainer!.append(l.row);
     });
@@ -648,7 +661,7 @@ export function createForm(props: FormProps): FormHandle {
           class: "chip-x",
           type: "button",
           text: "×",
-          attrs: { "aria-label": `${t("act_fav_remove")} — ${props.stationLabel(id)}` },
+          attrs: { "aria-label": t("city_remove", { station: props.stationLabel(id) }) },
           on: {
             click: () => {
               tourCities.splice(i, 1);
@@ -1241,32 +1254,37 @@ export function createForm(props: FormProps): FormHandle {
   cities.placeholder = t("cities_add");
   const cityChips = el("div", { class: "city-chips" });
   const citiesBox = el("div", { class: "cities-input" }, [cityChips, cities]);
-  const commitCities = (raw: string): void => {
+  // Turn the typed names into chips; a name matching no station stays in the field,
+  // flagged, with a message saying so.
+  const commitCities = (): void => {
     let added = false;
-    for (const part of raw.split(",")) {
+    const unknown: string[] = [];
+    for (const part of cities.value.split(",")) {
       const id = props.resolveStation(part);
-      if (id && !tourCities.includes(id)) {
+      if (!id) {
+        if (part.trim()) unknown.push(part.trim());
+      } else if (!tourCities.includes(id)) {
         tourCities.push(id);
         added = true;
       }
     }
+    cities.value = unknown.join(", ");
+    checkStation(cities);
+    surpriseMsg.textContent = unknown.length ? t("mc_unknown_station") : "";
     if (added) renderCityChips();
   };
+  cities.addEventListener("input", () => cities.classList.remove("is-invalid"));
   cities.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-      commitCities(cities.value);
-      cities.value = "";
+      commitCities();
     } else if (e.key === "Backspace" && cities.value === "" && tourCities.length) {
       tourCities.pop();
       renderCityChips();
     }
   });
   cities.addEventListener("change", () => {
-    if (cities.value.trim()) {
-      commitCities(cities.value);
-      cities.value = "";
-    }
+    if (cities.value.trim()) commitCities();
   });
 
   const originField = clearableField(t("field_origin"), origin);
@@ -1643,6 +1661,10 @@ export function createForm(props: FormProps): FormHandle {
     refreshTourEndDate,
     setSurpriseMsg: (text) => {
       surpriseMsg.textContent = text;
+    },
+    invalidStation: () => {
+      const fields = multiMode === "legs" ? legRows.flatMap((l) => [l.from, l.to]) : [cities];
+      return fields.filter((inp) => !checkStation(inp))[0];
     },
     destroy: () => {
       departDate.destroy();

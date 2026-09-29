@@ -1183,17 +1183,19 @@ export function multiTripViewEl(legs: RecapLeg[], ctx: RenderCtx): HTMLElement {
   // A leg with no seat can't just vanish — call the whole itinerary out as incomplete
   // so an N-1-leg chain isn't presented as a finished trip.
   if (incomplete) view.append(el("p", { class: "notice trip-incomplete", text: t("multi_incomplete") }));
+  // Each leg's travel date rides on its title, as on the round-trip ticket.
   legs.forEach((leg) => {
     view.append(
       el("section", { class: "trip-leg" }, [
-        el("h3", { class: "trip-leg-title" }, [
-          el("bdi", { text: ctx.label(leg.from) }),
-          el("span", { class: "muted", text: " → " }),
-          el("bdi", { text: ctx.label(leg.to) }),
+        el("h3", { class: "trip-leg-title trip-leg-title-dated" }, [
+          el("span", { class: "trip-leg-name" }, [
+            el("bdi", { text: ctx.label(leg.from) }),
+            el("span", { class: "muted", text: " → " }),
+            el("bdi", { text: ctx.label(leg.to) }),
+          ]),
+          el("span", { class: "trip-leg-date", text: ctx.formatDate(leg.date) }),
         ]),
-        leg.journey
-          ? journeyEl(leg.journey, ctx, { saveable: false, hideMap: true })
-          : emptyEl(`${t("res_none")} · ${ctx.formatDate(leg.date)}`),
+        leg.journey ? journeyEl(leg.journey, ctx, { saveable: false, hideMap: true }) : emptyEl(t("res_none")),
       ]),
     );
   });
@@ -1206,8 +1208,8 @@ function legKm(j: Journey, ctx: RenderCtx): number | null {
   return Number.isFinite(d) ? Math.round(d) : null;
 }
 
-/** A multi-city tour itinerary (tour mode). */
-export function tourEl(tour: Tour, ctx: RenderCtx): HTMLElement {
+/** A multi-city tour itinerary (tour mode); `hideMap` drops its map actions. */
+export function tourEl(tour: Tour, ctx: RenderCtx, hideMap = false): HTMLElement {
   const first = tour.legs[0];
   const stops = first ? [first.origin, ...tour.legs.map((l) => l.destination)] : [];
   // Total straight-line distance across every hop ("as the crow flies").
@@ -1215,14 +1217,7 @@ export function tourEl(tour: Tour, ctx: RenderCtx): HTMLElement {
   // Build the article first so each leg can share it as a selection group: clicking
   // a leg highlights only that one across the whole tour (not one per day band).
   const article = el("article", { class: "tour" });
-  // The header is a button: clicking it draws the whole tour (every stop) on the
-  // map, so after inspecting a single leg you can get the overview back.
-  const head = el("button", {
-    class: "tour-head is-clickable",
-    type: "button",
-    attrs: { title: t("act_map"), "aria-label": t("act_map") },
-    on: { click: () => ctx.onShowTour(tour) },
-  }, [
+  const headParts = [
     el("span", { class: "tour-route", text: stops.map((s) => ctx.label(s)).join(" → ") }),
     el("span", { class: "tour-totals" }, [
       ...(totalKm > 0
@@ -1233,7 +1228,17 @@ export function tourEl(tour: Tour, ctx: RenderCtx): HTMLElement {
         el("span", { text: formatDuration(tour.totalDurationMin) }),
       ]),
     ]),
-  ]);
+  ];
+  // Unless the map is hidden, the header is a button drawing the whole tour (every
+  // stop) on the map, so after inspecting a single leg you can get the overview back.
+  const head = hideMap
+    ? el("div", { class: "tour-head" }, headParts)
+    : el("button", {
+        class: "tour-head is-clickable",
+        type: "button",
+        attrs: { title: t("act_map"), "aria-label": t("act_map") },
+        on: { click: () => ctx.onShowTour(tour) },
+      }, headParts);
   // "Day N" is the actual trip day of each hop, so a multi-day stay shows real
   // gaps (Day 1, Day 4, …) rather than a misleading 1-per-row count. Each leg is a
   // clear day band: a bold numbered badge + the date, so days are easy to scan.
@@ -1254,7 +1259,7 @@ export function tourEl(tour: Tour, ctx: RenderCtx): HTMLElement {
           ? [el("span", { class: "leg-km muted", attrs: { title: t("nearest_hint") }, text: `${km} km` })]
           : []),
       ]),
-      journeyEl(j, ctx, { group: article }),
+      journeyEl(j, ctx, { group: article, hideMap }),
     ]);
   });
   article.append(
