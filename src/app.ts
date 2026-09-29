@@ -10,7 +10,14 @@ import {
 } from "./core/destinations";
 import { filterTrains, isNightTrain, type FilterOptions } from "./core/search";
 import { bestTripsAcrossWindow, stationsOnDate, reachableBest, type BestTrip, type ReachTrip } from "./core/best";
-import { bestGetawayTo, getawayIdeas, reverseGetawayIdeas, stayCalendar } from "./core/getaways";
+import {
+  bestGetawayTo,
+  getawayIdeas,
+  reverseGetawayIdeas,
+  sortGetaways,
+  stayCalendar,
+  type Getaway,
+} from "./core/getaways";
 import { planTours, planTourInOrder, planTourGreedy, arrivalDate, type Tour } from "./core/tour";
 import { findJourneys, bestJourney, reachableJourneys, journeyArriveAbs, toJourney, MAX_RESULTS } from "./core/connections";
 import type { ConnectionOptions } from "./core/connections";
@@ -801,12 +808,6 @@ function isWeekend(iso: string): boolean {
   return day === 0 || day === 6;
 }
 
-/** A calendar as the card sees it: MAX SENIOR is weekday-only, so a weekend is never bookable. */
-function gradeForCard(days: CalendarDay[], card: SearchQuery["card"]): CalendarDay[] {
-  if (card !== "senior") return days;
-  return days.map((d) => (isWeekend(d.date) ? { date: d.date, available: false, count: 0 } : d));
-}
-
 // Wikivoyage language editions that exist; others (e.g. ko) fall back to English.
 const WIKIVOYAGE_LANGS = new Set(["fr", "en", "es", "de", "it", "zh"]);
 
@@ -1426,13 +1427,14 @@ function repaintFormCalendar(): void {
   const round = nights !== null;
   // Flexible → the inline month becomes a departure→return RANGE picker (requirement 2):
   // `selected` is the departure, the return is `query.returnDate` (in window, on/after it),
-  // else — a link with none — on an exact route the departure + 2 its results propose. Other
-  // shapes keep the single-date picker.
+  // else — a link with none — on an exact route the departure + 2 its results propose. While
+  // the return tap is awaited there is none yet. Other shapes keep the single-date picker.
   const flexRange = formApi.isFlexible();
   const selected = refs.date.value || query.date;
   const windowDates = dateRange(today, BOOKING_WINDOW_DAYS);
   const pickedReturn = query.returnDate && query.returnDate >= selected ? query.returnDate : undefined;
-  const rangeEnd = flexRange ? (pickedReturn ?? (o && d ? proposedReturn(selected) : undefined)) : undefined;
+  const rangeEnd =
+    flexRange && !formRangeAwait ? (pickedReturn ?? (o && d ? proposedReturn(selected) : undefined)) : undefined;
   const rangeOpt = flexRange ? { end: rangeEnd, awaiting: formRangeAwait } : undefined;
   // A query snapshot read purely to derive the SAME options the eventual search will use.
   const fq = readQueryFromForm();
@@ -1529,7 +1531,7 @@ function repaintFormCalendar(): void {
   if (rangeOpt && calOpts) {
     calOpts = { ...calOpts, range: rangeOpt, hint: t("form_cal_flex_hint") };
   }
-  mount.append(render.calendarEl(gradeForCard(cal, fq.card), calCtx, selected, calOpts));
+  mount.append(render.calendarEl(cal, calCtx, selected, calOpts));
 }
 
 /**
@@ -1540,12 +1542,11 @@ function repaintFormCalendar(): void {
 function pickFormDay(date: string): void {
   refs.date.value = date;
   refs.departDate.setDate(date);
-  commitFormPick(true);
+  commitFormPick();
 }
 
-/** Run the form's picked day(s): refresh the results for the same route, else search. A
- *  finished pick (`reveal`) scrolls the refreshed list into view when it sits below the fold. */
-function commitFormPick(reveal: boolean): void {
+/** Run the form's picked day(s): refresh the results for the same route, else search. */
+function commitFormPick(): void {
   const fq = readQueryFromForm();
   // The bare landing shows no results to refresh, so a pick there is a navigation.
   const sameRoute =
@@ -1560,7 +1561,7 @@ function commitFormPick(reveal: boolean): void {
   // day, the calendar selection doesn't update the map"). Only a truly empty query stays
   // staged.
   if (queryIsRenderable(query)) {
-    if (sameRoute) refreshInPlace(reveal);
+    if (sameRoute) refreshInPlace(true);
     else applyAndRun();
   }
   repaintFormCalendar();
@@ -1568,25 +1569,25 @@ function commitFormPick(reveal: boolean): void {
 
 /**
  * A day tapped on the Flexible Trip-tab calendar, which is a departure→return RANGE picker
- * (requirement 2). The first tap sets the departure and arms the calendar for the return,
- * an exact route keeping the current span meanwhile; the next tap on/after the departure
- * sets the return (query.returnDate) with stay "flexible", while an earlier tap restarts. A
- * tap once the range is complete begins a fresh range. Each tap runs like a single-day pick,
- * so the header, the date pill, the URL and the results always agree.
+ * (requirement 2). The first tap stages the departure on the form and arms the calendar for
+ * the return; the next tap on/after it sets the return (query.returnDate) with stay
+ * "flexible" and runs the range like a single-day pick, while an earlier tap restarts. A tap
+ * once the range is complete begins a fresh range.
  */
 function pickFormRange(date: string): void {
   const out = refs.date.value || query.date;
   if (formRangeAwait && date >= out) {
     formRangeAwait = false;
     query = { ...query, returnDate: date };
-  } else {
-    formRangeAwait = true;
-    refs.date.value = date;
-    refs.departDate.setDate(date);
-    query = { ...query, date, returnDate: undefined };
+    commitFormPick();
+    return;
   }
-  // The first tap keeps the calendar in view for the return tap.
-  commitFormPick(!formRangeAwait);
+  // The departure stays on the form, its header reading it as pending until the return
+  // tap; `query`, the URL and the results keep the range already on screen meanwhile.
+  formRangeAwait = true;
+  refs.date.value = date;
+  refs.departDate.setDate(date);
+  repaintFormCalendar();
 }
 
 // --- search execution -------------------------------------------------------
@@ -2087,8 +2088,7 @@ function runGetaways(c: RenderCtx, origin: string): void {
   // DAY-SCOPED: list the round trips you can start on the chosen day, so the count matches
   // the "When to leave?" calendar's number for that day (pick another day → that day's list).
   // A window-wide union would say "65 possible" while the calendar cell says "8 that day".
-  const { trips } = getawayIdeas(trains, origin, [query.date], getawayOpts());
-  const shown = trips;
+  const shown = asOpened(getawayIdeas(trains, origin, [query.date], getawayOpts()).trips);
   if (shown.length === 0) {
     refs.results.append(render.emptyEl(t("getaway_none")));
     // Never a dead end: the next day with a round trip, and the one-way list.
@@ -2116,6 +2116,29 @@ function runGetaways(c: RenderCtx, origin: string): void {
   );
 }
 
+/** A stay's returns on a later day, fastest first: the trip page's return list, whose first
+ *  is the return it picks by default. */
+function stayReturns(q: SearchQuery, origin: string, destination: string, retDate: string): Journey[] {
+  const { journeyOpts, accept } = odJourneyOptsFor(q, origin, destination);
+  return findJourneys(deps.trains, destination, origin, retDate, journeyOpts)
+    .filter(accept)
+    .sort((a, b) => a.totalDurationMin - b.totalDurationMin || a.departMin - b.departMin);
+}
+
+/** Discovery cards as the trips they open: a stay's travel time counts the return that trip
+ *  picks by default (`stayReturns`), not the sweep's latest one home, so card and trip agree.
+ *  A same-day card already counts the trip's default, the latest return home by midnight. */
+function asOpened(trips: Getaway[]): Getaway[] {
+  const opened: SearchQuery = { ...query, mode: "od", via: undefined };
+  return trips
+    .map((trip) => {
+      if (trip.nights === 0) return trip;
+      const back = stayReturns(opened, trip.outbound.origin, trip.outbound.destination, trip.back.date)[0];
+      return back ? { ...trip, back, travelMin: trip.outbound.totalDurationMin + back.totalDurationMin } : trip;
+    })
+    .sort(sortGetaways);
+}
+
 /**
  * Reverse round-trip discovery: a round trip with only a DESTINATION filled. Lists the
  * origins you can round-trip FROM to reach `destination` (and come back), each a real
@@ -2127,9 +2150,8 @@ function runReverseGetaways(c: RenderCtx, destination: string): void {
   refs.title.textContent = t("rt_reverse_title", { station: registry.label(destination) });
   // DAY-SCOPED (mirrors runGetaways): list the origins you can round-trip from on the chosen
   // day, so the count matches the "When to leave?" calendar's number for that day.
-  const { trips } = reverseGetawayIdeas(trains, destination, [query.date], getawayOpts());
   // `trip.destination` here names the discovered ORIGIN (reverseGetawayIdeas relabels it).
-  const shown = trips;
+  const shown = asOpened(reverseGetawayIdeas(trains, destination, [query.date], getawayOpts()).trips);
   if (shown.length === 0) {
     refs.results.append(render.emptyEl(t("getaway_none")));
     showMap(destination, []);
@@ -2276,7 +2298,7 @@ function runMultiCity(c: RenderCtx): void {
     // handy when you left the date blank. Clicking a day sets it and re-runs.
     const legCal = availabilityCalendar(trains, leg.from, leg.to, windowDates, opts);
     const legCtx: RenderCtx = { ...c, onSelectDay: (d) => setLegDate(i, d) };
-    const calEl = journeys.length ? render.calendarEl(gradeForCard(legCal, query.card), legCtx, leg.date) : null;
+    const calEl = journeys.length ? render.calendarEl(legCal, legCtx, leg.date) : null;
     if (calEl) sec.append(calEl);
     const cards: HTMLElement[] = [];
     if (journeys.length === 0) sec.append(render.emptyEl(t("res_none")));
@@ -2404,7 +2426,7 @@ function runBestSearch(c: RenderCtx): void {
   // Month-long train count per destination (same figure as the "Where to?" list),
   // so an idea shows how well-served it is before you drill in.
   const stats = windowStats(trains, query.origin, "from", window, filterOpts());
-  // Fastest first (bestTripsAcrossWindow's own order) unless another key is picked.
+  // Sort by trains / days reachable / distance / name; "rec" keeps fastest-first.
   const origin = query.origin;
   const sorted = applySort(trips, {
     name: (tr) => registry.label(tr.destination),
@@ -2416,8 +2438,8 @@ function runBestSearch(c: RenderCtx): void {
   refs.results.append(
     render.listToolbarEl(
       t("res_destinations", { n: trips.length }),
-      query.sort ?? "fastest",
-      sortOptions(["fastest", "trains", "days", "closest", "name"]),
+      query.sort ?? "rec",
+      sortOptions(["rec", "trains", "days", "closest", "fastest", "name"]),
       onSort,
     ),
   );
@@ -2552,7 +2574,7 @@ function runOdSearch(c: RenderCtx): void {
   // Opened from an Ideas one-way tap → show the days you can go up front (calendar open);
   // otherwise it's collapsed behind a one-tap "Départ : … · Changer" summary as usual.
   const odCal = render.collapsibleCalendar(
-    render.calendarEl(gradeForCard(cal, query.card), c, query.date),
+    render.calendarEl(cal, c, query.date),
     "cal-collapsible",
     openOdCalendar,
   );
@@ -2893,9 +2915,8 @@ function runTripSearch(c: RenderCtx): void {
   const retCtx: RenderCtx = { ...c, onSelectDay: (d) => selectReturn(d) };
   // The return options for a chosen day: same-day (nights ≤ 0) keeps only trains leaving
   // AFTER the outbound arrives and home by midnight, latest first (most time on site);
-  // a later day keeps every return, the latest home by midnight first — the return the
-  // discovery cards count — then the later arrivals. Shared by the list render and the
-  // header-advance (which picks the pre-highlighted first option).
+  // a later day keeps every return, fastest first (`stayReturns`). Shared by the list render
+  // and the header-advance (which picks the pre-highlighted first option).
   const returnJourneys = (retDate: string): { list: Journey[]; sameDay: boolean; arrAbs: number } => {
     const nights = dayIndex(retDate) - dayIndex(query.date);
     if (nights <= 0) {
@@ -2909,11 +2930,7 @@ function runTripSearch(c: RenderCtx): void {
         .sort((a, b) => b.departMin - a.departMin);
       return { list, sameDay: true, arrAbs };
     }
-    const late = (j: Journey): number => (journeyArriveAbs(j) > 24 * 60 ? 1 : 0);
-    const list = findJourneys(trains, destination, origin, retDate, journeyOpts)
-      .filter(accept)
-      .sort((a, b) => late(a) - late(b) || b.departMin - a.departMin);
-    return { list, sameDay: false, arrAbs: 0 };
+    return { list: stayReturns(query, origin, destination, retDate), sameDay: false, arrAbs: 0 };
   };
   const renderReturns = (retDate: string): void => {
     clear(retList);
@@ -2948,7 +2965,7 @@ function runTripSearch(c: RenderCtx): void {
     const refocus = retCalHost.contains(document.activeElement);
     clear(retCalHost);
     retCalHost.append(
-      render.calendarEl(gradeForCard(retCal, query.card), retCtx, retDate, {
+      render.calendarEl(retCal, retCtx, retDate, {
         title: t("rt_inbound"),
         // First cell is same-day (hours on site); every later cell is nights away.
         count: (n, day) => (day.date === query.date ? t("daytrip_cal_hours", { dur: formatDuration(n * 60) }) : t("getaway_nights", { n })),
@@ -3045,7 +3062,7 @@ function runTripSearch(c: RenderCtx): void {
     refreshInPlace();
   };
   const outCalCtx: RenderCtx = { ...c, onSelectDay: onOutboundDay };
-  const outCalEl = render.calendarEl(gradeForCard(outCal, query.card), outCalCtx, query.date, {
+  const outCalEl = render.calendarEl(outCal, outCalCtx, query.date, {
     title: t("getaway_cal_title"),
     count: (n) => (isSameDayTrip ? t("daytrip_cal_hours", { dur: formatDuration(n * 60) }) : t("getaway_nights", { n })),
     countLegend: isSameDayTrip ? t("cal_legend_hours") : t("cal_legend_nights"),
@@ -3228,7 +3245,7 @@ function actionEl(text: string, onClick: () => void): HTMLElement {
 /** The first day after the chosen one, else the first in the window, that `cal` marks
  *  bookable on the query's card. */
 function nextAvailableDay(cal: CalendarDay[]): string | undefined {
-  const open = gradeForCard(cal, query.card).filter((d) => d.available && d.date !== query.date);
+  const open = cal.filter((d) => d.available && d.date !== query.date);
   return (open.find((d) => d.date > query.date) ?? open[0])?.date;
 }
 
@@ -3808,7 +3825,7 @@ function buildLayout(root: HTMLElement): void {
         // connection-aware) instead of the old direct-only undercount.
         cal = reachableCountCalendar(deps.trains, o, dates, opts, "from");
       }
-      if (cal) for (const c of gradeForCard(cal, query.card)) map.set(c.date, c.available ? c.count : 0);
+      if (cal) for (const c of cal) map.set(c.date, c.available ? c.count : 0);
       return map;
     },
     onSwitchTab: switchTab,
@@ -3843,7 +3860,6 @@ function buildLayout(root: HTMLElement): void {
       query = { ...query, card };
       store.updateUrl(query);
       runSearch();
-      repaintFormCalendar(); // a Senior calendar greys its weekends
     },
     onShare: (onCopied) => void shareCurrentUrl(onCopied),
     onInstall: () => void promptInstall(),

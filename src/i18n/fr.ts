@@ -91,7 +91,7 @@ export const fr = {
   desc_simple: "Trouvez un trajet précis, ou parcourez toutes les destinations au départ d'une gare (ou toutes les origines vers une gare).",
   desc_multi_plan: "Listez les villes à visiter : on les ordonne et les date en un périple faisable.",
   desc_multi_legs: "Composez chaque trajet à la main, gare par gare et date par date.",
-  desc_ideas: "Découvrez où partir depuis une gare, les plus rapides d'abord.",
+  desc_ideas: "Découvrez où partir depuis une gare, classé par nombre de trains gratuits.",
   hint_od_optional: "Optionnel : remplissez le départ, l'arrivée, ou les deux.",
   radius_hint: "Élargit la recherche aux gares voisines pour trouver plus de places gratuites.",
   act_swap: "Intervertir départ et arrivée",

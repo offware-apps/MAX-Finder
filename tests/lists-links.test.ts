@@ -118,15 +118,6 @@ describe("the card", () => {
     expect(params.get("from")).toBe(P); // the write-back ran
     expect(params.has("card")).toBe(false);
   });
-
-  it("a Senior calendar never marks a weekend bookable", () => {
-    const cell = (root: HTMLElement, date: string) => root.querySelector(`.results .cal-cell[data-date="${date}"]`)!;
-    const senior = setup(`${od}&card=senior`, lyon);
-    expect(cell(senior, "2026-06-26").classList.contains("ok")).toBe(true);
-    expect(cell(senior, "2026-06-27").classList.contains("ok")).toBe(false);
-    const jeune = setup(`${od}&card=jeune`, lyon);
-    expect(cell(jeune, "2026-06-27").classList.contains("ok")).toBe(true);
-  });
 });
 
 describe("a typed station", () => {
@@ -263,11 +254,11 @@ describe("Ideas", () => {
   ];
   const ideas = `?mode=best&from=${enc(P)}`;
 
-  it("offers no Recommended sort that repeats Fastest, and shows the durations it ranks by", () => {
+  it("keeps Recommended as the default sort, and shows the durations", () => {
     const root = setup(ideas, trains);
     const sort = root.querySelector<HTMLSelectElement>(".sort-select")!;
-    expect([...sort.options].map((o) => o.value)).not.toContain("rec");
-    expect(sort.value).toBe("fastest");
+    expect([...sort.options].map((o) => o.value)).toContain("rec");
+    expect(sort.value).toBe("rec");
     expect(root.querySelector('.group-card[data-station="LILLE"]')!.textContent).toContain(formatDuration(60));
   });
 
