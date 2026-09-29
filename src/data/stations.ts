@@ -154,6 +154,19 @@ export class StationRegistry {
     return this.byId.get(id);
   }
 
+  /** The id a linked name means: a bookable id as is, else the id, label or alias equal to
+   *  it ignoring case, accents and "St"/hyphen spelling, preferring one with trains. */
+  resolve(name: string): string | undefined {
+    if (this.present.has(name)) return name;
+    const n = matchNorm(name);
+    let best: Station | undefined;
+    for (const { station } of this.index) {
+      const names = [station.id, station.label, ...(station.aliases ?? [])];
+      if (names.some((s) => matchNorm(s) === n) && (!best || this.better(station, best))) best = station;
+    }
+    return best?.id;
+  }
+
   /** Every registered station (may contain label duplicates). */
   all(): Station[] {
     return [...this.byId.values()];

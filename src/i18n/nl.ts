@@ -16,6 +16,8 @@ export const nl: Dict = {
   datepick_window: "stippellijn = dagen binnen de ±-marge",
   err_load: "Kan de gegevens niet laden.",
   act_retry: "Opnieuw proberen",
+  err_app: "Deze pagina kan niet worden geopend.",
+  err_station: "Onbekend station: “{station}”. Kies er een uit de lijst.",
   tagline: "MAX JEUNE / SENIOR-plaatsen die te reserveren zijn.",
   mode_best: "Ideeën",
   best_title_all: "Alle bestemmingen vanaf {station}",

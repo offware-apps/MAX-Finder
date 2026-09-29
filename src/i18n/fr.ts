@@ -14,6 +14,8 @@ export const fr = {
   datepick_window: "pointillés = jours compris dans la marge ±",
   err_load: "Impossible de charger les données.",
   act_retry: "Réessayer",
+  err_app: "Cette page n'a pas pu s'ouvrir.",
+  err_station: "Gare inconnue : «\u00a0{station}\u00a0». Choisissez-en une dans la liste.",
   tagline: "Places MAX JEUNE / SENIOR ouvertes à la réservation.",
   mode_best: "Idées",
   best_title_all: "Toutes les destinations depuis {station}",

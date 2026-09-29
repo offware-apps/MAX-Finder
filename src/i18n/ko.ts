@@ -16,6 +16,8 @@ export const ko: Dict = {
   datepick_window: "점선 = ± 범위 내의 날짜",
   err_load: "데이터를 불러올 수 없습니다.",
   act_retry: "다시 시도",
+  err_app: "이 페이지를 열 수 없습니다.",
+  err_station: "알 수 없는 역: “{station}”. 목록에서 선택하세요.",
   tagline: "예약 가능한 MAX JEUNE / SENIOR 좌석.",
   mode_best: "추천",
   best_title_all: "{station}에서 갈 수 있는 모든 목적지",

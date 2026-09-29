@@ -16,6 +16,8 @@ export const it: Dict = {
   datepick_window: "punteggiato = giorni entro il margine ±",
   err_load: "Impossibile caricare i dati.",
   act_retry: "Riprova",
+  err_app: "Impossibile aprire questa pagina.",
+  err_station: "Stazione sconosciuta: «{station}». Scegline una dall'elenco.",
   tagline: "Posti MAX JEUNE / SENIOR aperti alla prenotazione.",
   mode_best: "Idee",
   best_title_all: "Tutte le destinazioni da {station}",

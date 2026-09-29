@@ -16,6 +16,8 @@ export const pt: Dict = {
   datepick_window: "pontilhado = dias dentro da margem ±",
   err_load: "Não foi possível carregar os dados.",
   act_retry: "Tentar novamente",
+  err_app: "Não foi possível abrir esta página.",
+  err_station: "Estação desconhecida: «{station}». Escolha uma da lista.",
   tagline: "Lugares MAX JEUNE / SENIOR abertos para reserva.",
   mode_best: "Ideias",
   best_title_all: "Todos os destinos a partir de {station}",

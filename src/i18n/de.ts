@@ -16,6 +16,8 @@ export const de: Dict = {
   datepick_window: "gepunktet = Tage innerhalb der ±-Spanne",
   err_load: "Daten konnten nicht geladen werden.",
   act_retry: "Erneut versuchen",
+  err_app: "Diese Seite konnte nicht geöffnet werden.",
+  err_station: "Unbekannter Bahnhof: „{station}“. Wähle einen aus der Liste.",
   tagline: "Reservierbare MAX JEUNE / SENIOR Plätze.",
   mode_best: "Ideen",
   best_title_all: "Alle Ziele ab {station}",

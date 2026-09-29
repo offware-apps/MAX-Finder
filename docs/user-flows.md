@@ -175,6 +175,11 @@ either an all-days overview or one specific day. Tap → open the route.
   (`replaceState`), never pushing a new entry. So repeated toggling can't pile up duplicate
   entries (the old bug where Back needed ~10 presses and the form appeared wiped).
 - **Deep links** — every search is a shareable URL; legacy `?rdate=` / `?rt=` links still work.
+  A station may be named in any case or accent (`from=paris`, `to=LILLE`) and resolves to
+  the station that has trains; a name matching no station shows "Unknown station" instead
+  of an empty result. A malformed or out-of-window departure date falls back to today; a
+  malformed or out-of-window return or finish-by date, and a malformed time filter, are
+  dropped. The address bar is then corrected in place (`replaceState`) to match the screen.
 - **PWA** — installable; a "new version — reload" postcard on updates.
 
 ## Known open items (see docs/trip-redesign.md for the audit plan)

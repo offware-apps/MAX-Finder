@@ -16,6 +16,8 @@ export const es: Dict = {
   datepick_window: "punteado = días dentro del margen ±",
   err_load: "No se pudieron cargar los datos.",
   act_retry: "Reintentar",
+  err_app: "No se pudo abrir esta página.",
+  err_station: "Estación desconocida: «{station}». Elige una de la lista.",
   tagline: "Plazas MAX JEUNE / SENIOR abiertas a reserva.",
   mode_best: "Ideas",
   best_title_all: "Todos los destinos desde {station}",

@@ -1507,6 +1507,7 @@ a {
   padding: 1.6rem;
   text-align: center;
   color: var(--muted);
+  overflow-wrap: anywhere; /* a long unbroken name from a link wraps instead of clipping */
 }
 .empty-hint {
   margin: 0.55rem 0 0;

@@ -27,20 +27,20 @@ function loadingStateEl(): HTMLElement {
   ]);
 }
 
-/** Clean error card with a retry action if the dataset fails to load. */
-function errorStateEl(): HTMLElement {
+/** Clean error card with a retry action: the data failed to load, or the page failed to open. */
+function errorStateEl(message: string, retry: () => void): HTMLElement {
   return el("div", { class: "error-state", attrs: { role: "alert" } }, [
     el("span", {
       class: "error-icon",
       attrs: { "aria-hidden": "true" },
       html: `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>`,
     }),
-    el("p", { class: "error-title", text: t("err_load") }),
+    el("p", { class: "error-title", text: message }),
     el("button", {
       class: "btn btn-primary",
       type: "button",
       text: t("act_retry"),
-      on: { click: () => location.reload() },
+      on: { click: retry },
     }),
   ]);
 }
@@ -61,12 +61,21 @@ if (root) {
     root.replaceChildren(loadingStateEl());
   }
   const registry = new StationRegistry(stationData as Station[]);
-  loadDataset()
-    .then((dataset) => initApp(root, dataset, registry))
-    .catch((err: unknown) => {
+  loadDataset().then(
+    (dataset) => {
+      try {
+        initApp(root, dataset, registry);
+      } catch (err) {
+        // The data loaded but this link or saved state broke the page: retry without the link.
+        console.error(err);
+        root.replaceChildren(errorStateEl(t("err_app"), () => location.assign(location.pathname)));
+      }
+    },
+    (err: unknown) => {
       console.error(err);
-      root.replaceChildren(errorStateEl());
-    });
+      root.replaceChildren(errorStateEl(t("err_load"), () => location.reload()));
+    },
+  );
 }
 
 // When a new build is deployed, greet the user with a dismissible "reload to update"
