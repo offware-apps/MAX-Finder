@@ -148,8 +148,9 @@ span applied to the lists only, and a day could read green while its list was em
    - **Trip modal** = booking recap: each leg's own **travel date** rides on the ticket header
      (beside "Outbound" / "Return"), and an unmistakable per-leg action — "Book the outbound" /
      "Book the return" (each deep-links SNCF Connect; a connecting leg opens the step modal)
-     — plus Save the whole trip. Back inside the accordion re-opens the outbound before it
-     exits the flow (step-wise back).
+     — plus Save the whole trip, and "See all dates", which closes the modal and opens both
+     legs and both calendars in place. Back inside the accordion re-opens the outbound before
+     it exits the flow (step-wise back).
 3. **Only From, One-way** → browse (`runBrowse` "from"). Every destination reachable from the
    station, ranked by how well-served it is, with availability. Tap a card → the exact trip.
    The list reads direct cards, then connection-only ("via") rows, then the radius "Stations
@@ -192,18 +193,35 @@ the destination is reachable, with its calendar open.
   destination, hover/selection synced with the list; route line for exact trips; auto-fits
   above the drawer on mobile.
 - **Saved & Favorites** — star a route / save a trip, from the header menu. (The two overlap
-  — a known cleanup item.)
+  — a known cleanup item.) A saved trip opens its ticket modal, whose "See all dates" opens
+  the route page; a favorite prefills the Trip tab with that route alone.
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
   reduced motion + compact) with a one-time nudge on weak devices; language. MAX SENIOR is
   weekday-only, so every calendar greys its weekends (a weekend list keeps its notice).
 - **Mobile** — the form is a sheet that collapses to a search bar; results are a bottom-sheet
   drawer with detents. Back navigation preserves form state and never lands on a dead screen.
-- **History model** — a genuine navigation (Search, drilling into a route, opening the saved
-  page) pushes **one** history entry carrying a form snapshot, so browser Back returns to the
-  prior page with the form intact. Refining the current view — the Aller simple/retour toggle,
-  the nights stepper, the Flexible pill, picking a calendar day — updates **in place**
-  (`replaceState`), never pushing a new entry. So repeated toggling can't pile up duplicate
-  entries (the old bug where Back needed ~10 presses and the form appeared wiped).
+- **History model** — a genuine navigation (Search, a tab switch, drilling into a route,
+  opening the saved page) pushes **one** history entry carrying a snapshot of the form, tab
+  included, so browser Back and Forward return to each page with **its own** form intact,
+  never the latest one. Refining the current view — the Aller simple/retour toggle, the nights
+  stepper, the Flexible pill, picking a calendar day — updates **in place** (`replaceState`),
+  never pushing a new entry. So repeated toggling can't pile up duplicate entries (the old bug
+  where Back needed ~10 presses and the form appeared wiped). Details of the model:
+  - The **bare landing URL never shows results**: Back to it restores the form as it was left
+    and shows "press Search". A refinement made on the landing form still pushes one entry
+    (so there is a form to Back to), and since the user never left the form, Back to the
+    landing keeps what was built on that entry (a Flexible range included).
+  - The **saved-trips page** is its own entry: Forward onto it shows it again.
+  - Leaving a list for a route stamps the list's **scroll position**; Back restores it (the
+    drawer on a phone, the main column on a desktop).
+  - An open **dialog** owns one entry: Back closes it and leaves the page under it as it
+    was. Closing it with its own button, Escape or the backdrop pops that entry, so no stray
+    Back step is left behind.
+  - A **Search with nothing to search** (no station) adds no entry: a hint under the button
+    says what is missing.
+  - The `1/2/3` shortcuts never move focus into a field, so they keep working after landing
+    on an empty tab: an empty field gets a ready cursor only while nothing else holds focus,
+    as on the first load.
 - **Deep links** — every search is a shareable URL; legacy `?rdate=` / `?rt=` links still work.
   A station may be named in any case or accent (`from=paris`, `to=LILLE`) and resolves to
   the station that has trains; a name matching no station shows "Unknown station" instead
@@ -219,4 +237,3 @@ the destination is reachable, with its calendar open.
 - Collapse the two save systems (favorite star + Save bookmark) into one.
 - One `openRoute()` primitive (list cards / favorites / map pins behave consistently).
 - One home for the availability calendar (form popover vs results).
-- Mobile browser-Back should close detail pages via history.

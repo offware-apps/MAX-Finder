@@ -34,6 +34,7 @@ import {
   showMultiTripModal,
   showTourModal,
   showSettingsModal,
+  modalPopstate,
 } from "./ui/modals";
 import { generateBookingUrl } from "./util/booking";
 import { t, setLang, getLang, isLang } from "./i18n";
@@ -654,33 +655,21 @@ export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRe
   // single back-stack; the entry's `detail` flag (read by renderSearch) keeps the in-app
   // "Retour" in step with where the history now sits.
   window.addEventListener("popstate", (ev) => {
+    if (modalPopstate(ev.state)) return; // Back closed a dialog; the page under it stays
     const searched = queryFromUrl();
-    // Restore the FORM from the snapshot stashed on this history entry (staged edits —
-    // departure, destination, filters — survive the round trip), then the RESULTS from
-    // the URL. Falling back to the URL query keeps older entries (no snapshot) working.
-    const snap = formStateFrom(ev.state);
-    let formQuery = snap ?? searched;
-    // The URL decides the SCREEN: a renderable query is a COMMITTED search (results page); a
-    // bare, non-renderable URL is the home/form screen. Only the home entry can carry a
-    // snapshot frozen mid-build — stamped the instant "Aller-retour" was toggled (a same-day
-    // round trip), before Flexible + the return were picked — OR no snapshot at all. So ONLY
-    // there do we restore the full form the user last assembled, keeping the whole build
-    // (departure, Flexible range, filters) across a Back instead of a wiped/partial form.
-    // A committed search entry always keeps its OWN snapshot, so Backing through several
-    // distinct searches restores each one faithfully (never the latest build). goHome() nulls
-    // lastBuiltForm, so the logo/reset path lands on a genuinely empty home.
-    const onResults = queryIsRenderable(searched);
-    if (!onResults && lastBuiltForm && !isBlankForm(lastBuiltForm)) {
-      formQuery = lastBuiltForm;
-    }
+    const state = entryState();
+    // Restore the FORM and tab from this entry's snapshot (the bare landing's is landingForm
+    // when set), then the RESULTS from the URL; an entry with no snapshot uses the URL.
+    const formQuery = (!store.urlHasQuery() && landingForm) || state.form || searched;
+    // The URL decides the SCREEN: a renderable query, or the saved-trips page, is a results
+    // page; anything else is the form screen, where renderSearch shows no results.
+    const onResults = queryIsRenderable(searched) || Boolean(state.saved);
     query = formQuery;
     syncFormFromQuery();
     query = onResults ? searched : formQuery;
-    runSearch();
+    runSearch(state.scroll);
     // On mobile the form and the results are two different screens. Back/Forward must
-    // move between them too: a URL with no search is the initial (form) screen, one
-    // with a search is the results screen. Follow the URL (onResults), not `query` — on the
-    // home entry `query` now carries the restored build, but the screen is still the form.
+    // move between them too, following the URL (onResults), not `query`.
     setMobileForm(!onResults);
   });
 }
@@ -897,7 +886,6 @@ function ctx(): RenderCtx {
       store.toggleTrip(buildSavedTrip(out, inb));
       renderSavedTrips();
     },
-    onShowTrip: (out, inb) => showTripModal(out, ctx(), { inbound: inb, onShare: shareCurrentUrl }),
     isTourSaved: (tour) => store.isTripSaved(store.tourId(tour)),
     onToggleTour: (tour) => {
       store.toggleTrip(buildSavedTour(tour));
@@ -1147,34 +1135,41 @@ interface HistoryState {
    *  the in-app "Retour" shows and Back returns to the underlying list. The browser history
    *  is the single back-stack — this flag just marks which entries are drill-ins. */
   detail?: boolean;
+  /** The saved-trips page: renderSearch shows it in place of the search under it. */
+  saved?: boolean;
+  /** Pushed off the bare landing form by an in-place refinement (the trip-type toggle, the
+   *  nights, Flexible): the user is still on the form, so it is the landing's form too. */
+  landing?: boolean;
+  /** The list's scroll offset, stamped when a navigation leaves the entry. */
+  scroll?: number;
+}
+/** The current history entry's state, empty on an entry the app never stamped. */
+function entryState(): Partial<HistoryState> {
+  const s: unknown = history.state;
+  return s && typeof s === "object" ? (s as Partial<HistoryState>) : {};
 }
 /** Whether the current history entry is a drilled-in detail page. */
 function currentDetail(): boolean {
-  const s = history.state;
-  return Boolean(s && typeof s === "object" && (s as { detail?: unknown }).detail);
+  return Boolean(entryState().detail);
 }
-// The last form the user actually built (origin/destination/legs filled). Kept so a Back
-// that lands on the bare home entry — whose snapshot predates the finished build (e.g. it
-// was stamped the moment Round trip was toggled, before Flexible + the return were picked) —
-// restores the WHOLE form the user assembled instead of wiping it. "Keep all data of the
-// initial form across every screen."
-let lastBuiltForm: SearchQuery | null = null;
-/** A form with no route yet — nothing worth preserving across a Back. */
-function isBlankForm(q: SearchQuery): boolean {
-  return !q.origin && !q.destination && !(q.legs && q.legs.length > 0);
+// The latest form of the entry pushed off the bare landing by an in-place refinement, which
+// a Back to the landing restores; null when a Search or a drill-in left the landing instead.
+let landingForm: SearchQuery | null = null;
+/** Stamp the current entry with `query` and the live form, keeping its other flags. */
+function restamp(): void {
+  const state = { ...entryState(), form: readQueryFromForm() };
+  if (state.landing) landingForm = state.form;
+  store.updateUrl(query, state);
 }
-function formSnapshot(detail = false): HistoryState {
-  const form = readQueryFromForm();
-  if (!isBlankForm(form)) lastBuiltForm = form; // remember the richest form we've seen
-  return detail ? { form, detail: true } : { form };
-}
-/** Read a form snapshot back off a popstate `event.state`, if one is present. */
-function formStateFrom(state: unknown): SearchQuery | null {
-  if (state && typeof state === "object" && "form" in state) {
-    const form = (state as { form?: unknown }).form;
-    if (form && typeof form === "object") return form as SearchQuery;
+/** Stamp the entry a navigation leaves: the list's scroll offset, which Back restores, and
+ *  on the bare landing the form as the user left it. */
+function leaveEntry(): void {
+  const state = { ...entryState(), scroll: listScroller().scrollTop };
+  if (!store.urlHasQuery()) {
+    state.form = readQueryFromForm();
+    landingForm = null;
   }
-  return null;
+  history.replaceState(state, "", location.href);
 }
 
 /** Parse a day-count input into 1..14, falling back to `fallback`. */
@@ -1215,27 +1210,21 @@ function applyAndRun(push = true, detail = false): void {
   // replace in place instead of pushing a duplicate.
   const alreadyShown = store.urlHasQuery() && store.queryToParams(query).toString() === location.search.replace(/^\?/, "");
   if ((push || leavingBareForm) && !alreadyShown) {
-    // If we're leaving the bare home/form page — no query in the URL and no form snapshot on
-    // the entry yet — stamp it (same URL, we only add state) with the staged form so a
-    // browser Back returns with the departure/destination/filters still filled instead of a
-    // wiped form ("even if you come back it gets deleted"). Guard on BOTH: an entry with a
-    // query in its URL owns a real page (a deep-linked or prior search) whose form Back must
-    // restore verbatim — stamping it with the form we're switching TO would corrupt it. The
-    // results entry pushed below carries its own snapshot for Forward.
-    if (leavingBareForm && !formStateFrom(history.state)) {
-      history.replaceState(formSnapshot(), "", location.href);
-    }
+    leaveEntry();
     // Push a browser history entry so the native Back button returns to the prior page,
     // stashing a snapshot of the live form on the entry so a gesture-Back / popstate can
     // restore the exact form that produced this page instead of wiping it. `detail` marks a
     // drilled-in page (route from a list) so renderSearch shows the in-app Retour.
-    store.pushUrl(query, formSnapshot(detail));
+    const form = readQueryFromForm();
+    const landing = leavingBareForm && !push;
+    if (landing) landingForm = form;
+    store.pushUrl(query, { form, detail, landing });
   } else {
     // In-place refinement of the view already on screen: REPLACE the current entry (still
     // stamping the live form snapshot, so Back restores the filled form) so a run of
-    // toggles adds zero history entries. Preserve the detail flag — a refine stays on the
+    // toggles adds zero history entries. The entry keeps its flags — a refine stays on the
     // same (possibly drilled-in) page.
-    store.updateUrl(query, formSnapshot(currentDetail()));
+    restamp();
   }
   settings = { ...settings, card: query.card };
   store.saveSettings(settings);
@@ -1255,6 +1244,32 @@ function applyAndRun(push = true, detail = false): void {
 function resultsScroller(): HTMLElement | null {
   const drawer = document.querySelector<HTMLElement>(".drawer-scroll");
   return drawer && drawer.scrollHeight > drawer.clientHeight + 1 ? drawer : null;
+}
+
+/** The element the result list scrolls in: the drawer on a phone, the main column on a
+ *  desktop, else the page. */
+function listScroller(): Element {
+  const scrolls = (e: Element | null): e is Element => Boolean(e && /auto|scroll/.test(getComputedStyle(e).overflowY));
+  return (
+    [".drawer-scroll", ".main-col"].map((s) => document.querySelector(s)).find(scrolls) ??
+    document.scrollingElement ??
+    document.documentElement
+  );
+}
+
+/** Scroll the list to `top`, following it while its chunks render in, until it gets there
+ *  or stops growing. */
+function scrollListTo(top: number): void {
+  const gen = renderGen;
+  const scroller = listScroller();
+  let height = -1;
+  const step = (): void => {
+    if (gen !== renderGen || scroller.scrollHeight === height) return;
+    height = scroller.scrollHeight;
+    scroller.scrollTop = top;
+    if (scroller.scrollTop < top - 1) requestAnimationFrame(step);
+  };
+  step();
 }
 
 /**
@@ -1285,10 +1300,9 @@ function revealResults(): void {
 function refreshInPlace(reveal = false): void {
   // Restamp the entry with a FRESH form snapshot (not just the URL): an in-place refine —
   // completing a Flexible range, moving the return — changes the form, and a Back must
-  // restore that latest form, not the snapshot frozen before the refine. formSnapshot()
-  // also refreshes lastBuiltForm, so the home-entry fallback stays current. Preserve the
-  // detail flag: an in-place refresh (calendar day, moving the return) stays on the same page.
-  store.updateUrl(query, formSnapshot(currentDetail()));
+  // restore that latest form, not the snapshot frozen before the refine. The entry keeps
+  // its flags: an in-place refresh (calendar day, moving the return) stays on the same page.
+  restamp();
   const scroller = resultsScroller();
   const scrollY = scroller ? scroller.scrollTop : window.scrollY;
   // A calendar-day pick is usually what triggers an in-place refresh. If a day cell had
@@ -1533,8 +1547,12 @@ function pickFormDay(date: string): void {
  *  finished pick (`reveal`) scrolls the refreshed list into view when it sits below the fold. */
 function commitFormPick(reveal: boolean): void {
   const fq = readQueryFromForm();
+  // The bare landing shows no results to refresh, so a pick there is a navigation.
   const sameRoute =
-    query.origin === fq.origin && query.destination === fq.destination && (query.mode === "od" || tripIsRound());
+    store.urlHasQuery() &&
+    query.origin === fq.origin &&
+    query.destination === fq.destination &&
+    (query.mode === "od" || tripIsRound());
   query = fq;
   // Run as soon as the query is searchable — an exact route OR a one-ended discovery
   // (origin-only "from"/"best", destination-only "to") — so tapping a day refreshes the
@@ -1702,7 +1720,8 @@ function cancelLoading(): boolean {
   return true;
 }
 
-function runSearch(): void {
+/** Run the current query and render it; `scrollTo` puts the list back at that offset. */
+function runSearch(scrollTo?: number): void {
   searchToken++;
   const token = searchToken;
   searchLoading = true;
@@ -1728,6 +1747,7 @@ function runSearch(): void {
         searchLoading = false;
         clear(refs.results);
         renderSearch();
+        if (scrollTo !== undefined) scrollListTo(scrollTo);
       });
     });
   };
@@ -1819,9 +1839,18 @@ function appendInChunks<T>(
 function renderSearch(): void {
   renderGen++;
   activeStepBack = null; // each render re-registers its own step-back (if any)
+  rootRef.dataset.detail = currentDetail() ? "on" : "";
+  if (entryState().saved) return renderSavedPage();
+  // A bare URL is the landing form: a filled form restored there waits for Search.
+  if (!store.urlHasQuery() && queryIsRenderable(query)) {
+    document.title = APP_TITLE;
+    refs.title.textContent = "";
+    showSearchPrompt();
+    updateSearchBar();
+    return;
+  }
   const c = ctx();
   updateDocTitle();
-  rootRef.dataset.detail = currentDetail() ? "on" : "";
 
   // NB: the map is drawn by exactly ONE call per render — the mode's own show()/
   // route(), or showBaseMap() on an empty state (via showHint / a "nothing to plot"
@@ -2128,9 +2157,7 @@ function runArmedPrompt(): void {
   refs.title.textContent = "";
   refs.results.append(render.emptyEl(t("rt_need_origin")));
   showBaseMap();
-  // Focus the origin so typing one immediately runs discovery (no extra click) — but
-  // NOT on phones, where it springs the on-screen keyboard behind the results drawer.
-  if (!isTouch()) refs.origin.focus({ preventScroll: true });
+  offerFocus(refs.origin);
 }
 
 function runMultiCity(c: RenderCtx): void {
@@ -2757,9 +2784,16 @@ function runTripSearch(c: RenderCtx): void {
     b.body.style.display = collapsed ? "none" : "";
     refreshSummary(i);
   };
+  // "See all dates" in the ticket: both legs and both calendars open right here.
+  const showAllDates = (): void => {
+    setCollapsed(0, false);
+    setCollapsed(1, false);
+    outCalUI.setOpen(true);
+    retCalUI.setOpen(true);
+  };
   const openTripModal = (): void => {
     if (chosenOutbound && boxes[1]?.chosen) {
-      showTripModal(chosenOutbound, c, { inbound: boxes[1].chosen, onShare: shareCurrentUrl });
+      showTripModal(chosenOutbound, c, { inbound: boxes[1].chosen, onShare: shareCurrentUrl, onMoreDates: showAllDates });
     }
   };
   // Reopen the ticket on demand ("View ticket"): use the chosen legs when set, else the
@@ -2768,7 +2802,7 @@ function runTripSearch(c: RenderCtx): void {
   const openTripModalBest = (): void => {
     const out = chosenOutbound ?? outJourneys[0];
     const ret = boxes[1]?.chosen ?? returnJourneys(odReturnDate ?? proposed).list[0];
-    if (out && ret) showTripModal(out, c, { inbound: ret, onShare: shareCurrentUrl });
+    if (out && ret) showTripModal(out, c, { inbound: ret, onShare: shareCurrentUrl, onMoreDates: showAllDates });
   };
   const pickReturn = (j: Journey): void => {
     if (boxes[1]) boxes[1].chosen = j;
@@ -2957,7 +2991,7 @@ function runTripSearch(c: RenderCtx): void {
       // a long pick shows the real fixed count).
       formApi.setStayNights(nights);
     }
-    store.updateUrl(query, formSnapshot(currentDetail()));
+    restamp();
     paintReturn(retDate);
     deferFormCalRepaint(); // the form's range, header and stay grading follow the new return
     // The return list updates IN PLACE right where the calendar is — no scroll jump (a
@@ -3218,9 +3252,13 @@ function showHint(input: HTMLInputElement): void {
   // empty — a confusing "why am I here?" page. Send the phone back to the search form
   // instead, which is the real entry point.
   setMobileForm(true);
-  // On phones, don't auto-focus the field: it pops the keyboard + the station
-  // suggestion dropdown over the whole UI on entry. Let the user tap it first.
-  if (!isTouch()) input.focus({ preventScroll: true });
+  offerFocus(input);
+}
+
+/** Put a ready cursor in the empty field while nothing holds focus (a navigation leaves it on
+ *  the heading, where shortcuts work); never on a phone, where it pops the keyboard. */
+function offerFocus(input: HTMLInputElement): void {
+  if (!isTouch() && document.activeElement === document.body) input.focus({ preventScroll: true });
 }
 
 function goBack(): void {
@@ -3234,7 +3272,6 @@ function goBack(): void {
 
 /** Reset to the landing state (clicking the logo). Keeps language/theme/card. */
 function goHome(): void {
-  lastBuiltForm = null; // an explicit reset — don't let a later Back resurrect the old form
   query = { mode: "from", date: today, card: settings.card, maxConnections: 1, hidden: true };
   syncFormFromQuery();
   applyAndRun();
@@ -3310,13 +3347,18 @@ function runFromForm(): void {
     setSurpriseMsg(t("err_station", { station: unknown.value.trim() }));
     return;
   }
+  const next = readQueryFromForm();
+  // Nothing to search yet: name the missing step under Search, and leave the page and the
+  // history as they are rather than committing an empty search.
+  if (!queryIsRenderable(next)) {
+    const legs = tripType === "multi" && formApi.getMultiMode() === "legs";
+    setSurpriseMsg(t(legs ? "multi_hint" : "need_origin"));
+    return;
+  }
   setSurpriseMsg("");
-  query = readQueryFromForm();
+  query = next;
   applyAndRun();
-  // Only swap the phone to the results view when there's something real to show. An
-  // incomplete query stays on the form, with the missing step named under Search.
-  if (queryIsRenderable(query)) setMobileForm(false);
-  else setSurpriseMsg(t(query.mode === "tour" && formApi.getMultiMode() === "legs" ? "multi_hint" : "need_origin"));
+  setMobileForm(false);
 }
 
 /** Shift the chosen date by `delta` days, clamped to the bookable window. */
@@ -3947,7 +3989,9 @@ function fillRoute(origin: string, destination: string): void {
   // Clear any stale "via" so a saved route isn't filtered through an unrelated hub.
   query = { ...query, mode: "od", origin, destination, via: undefined };
   syncFormFromQuery();
-  store.updateUrl(query); // keep the URL in step with the prefilled route
+  // Re-read the Trip tab's form, which drops what only another tab carries (tour cities, legs).
+  query = readQueryFromForm();
+  restamp(); // keep the URL and the entry's form in step with the prefilled route
   // Favorites live in the results drawer, but the form they prefill is a different
   // screen on mobile (display:none in results view). Bring the form sheet forward so
   // the prefilled route is actually visible — otherwise tapping a favorite did
@@ -4014,7 +4058,12 @@ function savedTripInfo(trip: store.SavedTrip): { label: string; when: string; op
   return {
     label: `${deps.registry.label(out.origin)} ${inb ? "⇄" : "→"} ${deps.registry.label(out.destination)}`,
     when: inb ? `${formatDate(out.date)} – ${formatDate(inb.date)}` : formatDate(out.date),
-    open: () => showTripModal(out, ctx(), { inbound: inb, onShare: shareCurrentUrl }),
+    open: () =>
+      showTripModal(out, ctx(), {
+        inbound: inb,
+        onShare: shareCurrentUrl,
+        onMoreDates: () => ctx().onOpenRoute(out.origin, out.destination),
+      }),
   };
 }
 
@@ -4072,18 +4121,14 @@ function renderSavedTrips(): void {
 
 /** Open the dedicated saved-trips page (full list), remembering where we were. */
 function openSavedPage(): void {
-  // Push a browser history entry marked as a detail page (carrying the form snapshot) so a
-  // gesture / browser Back closes the saved page coherently — popping back to the underlying
-  // search — instead of skipping past it, and returns with the form intact.
-  store.pushUrl(query, formSnapshot(true));
-  if (pendingRaf) cancelAnimationFrame(pendingRaf);
-  pendingRaf = 0;
-  // Enter the full-page detail layout (like drilling into a route) so this isn't
-  // crammed into the 30vh bottom sheet with the map behind it on mobile. On the way back,
-  // renderSearch reads the (now non-detail) entry and clears this.
-  rootRef.dataset.detail = "on";
-  clear(refs.results);
-  renderSavedPage();
+  // Push a detail entry flagged `saved`, carrying the form snapshot: Back returns to the
+  // search under it with the form intact, and renderSearch shows this page on Forward.
+  leaveEntry();
+  store.pushUrl(query, { form: readQueryFromForm(), detail: true, saved: true });
+  cancelLoading(); // a search still in flight must not paint over the page
+  // renderSearch enters the full-page detail layout (like drilling into a route) so this
+  // isn't crammed into the 30vh bottom sheet with the map behind it on mobile.
+  renderSearch();
   refs.title.focus({ preventScroll: true });
   refs.title.scrollIntoView({ behavior: "smooth", block: "start" });
 }
