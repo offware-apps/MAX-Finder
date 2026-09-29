@@ -12,11 +12,11 @@ import { filterTrains, isNightTrain, type FilterOptions } from "./core/search";
 import { bestTripsAcrossWindow, stationsOnDate, reachableBest, type BestTrip, type ReachTrip } from "./core/best";
 import { getawayIdeas, reverseGetawayIdeas, stayCalendar } from "./core/getaways";
 import { planTours, planTourInOrder, planTourGreedy, arrivalDate, type Tour } from "./core/tour";
-import { findJourneys, bestJourney, reachableJourneys, journeyArriveAbs, toJourney, MAX_RESULTS } from "./core/connections";
+import { findJourneys, bestJourney, reachableJourneys, journeyArriveAbs, catchableAfter, toJourney, MAX_RESULTS } from "./core/connections";
 import type { ConnectionOptions } from "./core/connections";
 import { availabilityCalendar, reachableCountCalendar, dateRange } from "./core/calendar";
 import { findHiddenTrains } from "./core/hidden";
-import { addDays, dayIndex, formatDuration } from "./util/time";
+import { addDays, dayIndex, formatDuration, minutesToHHMM } from "./util/time";
 import { haversineKm } from "./util/geo";
 import { el, clear, isTouch } from "./ui/dom";
 import { buildShell, applyTheme, applyDensity, applyReduceMotion, applyMap, closeHeaderMenu } from "./ui/shell";
@@ -2125,6 +2125,14 @@ function runArmedPrompt(): void {
   if (!isTouch()) refs.origin.focus({ preventScroll: true });
 }
 
+/** A typed multi-city leg's journeys on its date, fastest first, then earliest. */
+function legJourneys(leg: { from: string; to: string; date: string }): Journey[] {
+  const opts = { ...filterOpts(), maxConnections: query.maxConnections };
+  return findJourneys(deps.trains, leg.from, leg.to, leg.date, opts).sort(
+    (a, b) => a.totalDurationMin - b.totalDurationMin || a.departMin - b.departMin,
+  );
+}
+
 function runMultiCity(c: RenderCtx): void {
   const { trains, registry } = deps;
   const legs = (query.legs ?? []).filter((l) => l.from && l.to);
@@ -2135,7 +2143,6 @@ function runMultiCity(c: RenderCtx): void {
   }
   refs.title.textContent = t("multi_title", { n: legs.length });
   const stations: string[] = [];
-  const legSections: HTMLElement[] = [];
   const chosen: (Journey | null)[] = legs.map(() => null);
   const windowDates = dateRange(today, BOOKING_WINDOW_DAYS);
 
@@ -2143,14 +2150,18 @@ function runMultiCity(c: RenderCtx): void {
   // to just the chosen train once you pick one, so a long list doesn't push the next
   // leg far down the page. Picking a train collapses its leg, opens the next, and
   // scrolls to it; picking the LAST leg opens the whole-trip ticket modal. The head
-  // toggles a leg open/closed by hand. A leg with no seat stays open (nothing to
-  // collapse to) so its "no MAX seat" message is never hidden.
+  // toggles a leg open/closed by hand. A leg with nothing to pick stays open so its
+  // message is never hidden.
   interface LegUI {
+    sec: HTMLElement;
     head: HTMLElement;
     num: HTMLElement;
     summary: HTMLElement;
-    calEl: HTMLElement | null;
-    cards: HTMLElement[];
+    calEl: HTMLElement;
+    /** Every journey on the leg's date, fastest first. */
+    journeys: Journey[];
+    /** The leg's notice and train cards, rebuilt by fillLeg. */
+    nodes: HTMLElement[];
     chosenCard: HTMLElement | null;
     collapsed: boolean;
     empty: boolean;
@@ -2168,24 +2179,65 @@ function runMultiCity(c: RenderCtx): void {
   };
   const setCollapsed = (i: number, collapsed: boolean): void => {
     const ui = legUI[i];
-    if (!ui || ui.empty) return; // a seatless leg stays open — nothing to collapse to
-    ui.collapsed = collapsed;
-    legSections[i]?.classList.toggle("mc-collapsed", collapsed);
-    ui.head.setAttribute("aria-expanded", String(!collapsed));
-    if (ui.calEl) ui.calEl.style.display = collapsed ? "none" : "";
-    for (const card of ui.cards) card.style.display = !collapsed || card === ui.chosenCard ? "" : "none";
+    if (!ui) return;
+    ui.collapsed = collapsed && !ui.empty; // a seatless leg stays open — nothing to collapse to
+    ui.sec.classList.toggle("mc-collapsed", ui.collapsed);
+    ui.head.setAttribute("aria-expanded", String(!ui.collapsed));
+    ui.calEl.style.display = ui.collapsed ? "none" : "";
+    for (const n of ui.nodes) n.style.display = !ui.collapsed || n === ui.chosenCard ? "" : "none";
     refreshSummary(i);
+  };
+  // List the journeys of leg i still catchable after leg i-1's pick arrives, keeping
+  // leg i's own pick when it is among them, else the fastest.
+  const fillLeg = (i: number): void => {
+    const ui = legUI[i]!;
+    const prev = chosen[i - 1] ?? null;
+    const options = catchableAfter(ui.journeys, prev);
+    const keep = chosen[i];
+    chosen[i] = keep && options.includes(keep) ? keep : (options[0] ?? null);
+    for (const n of ui.nodes) n.remove();
+    ui.nodes = [];
+    ui.chosenCard = null;
+    ui.empty = options.length === 0;
+    if (prev && (options.length < ui.journeys.length || legs[i]!.date < arrivalDate(prev))) {
+      // Some (or all) of this leg's trains leave before the previous leg arrives.
+      const arrival = { date: formatDate(arrivalDate(prev)), time: minutesToHHMM(journeyArriveAbs(prev)) };
+      ui.nodes.push(
+        options.length
+          ? render.hintEl(t("mc_after", arrival))
+          : el("p", { class: "notice", text: t("mc_missed", arrival) }),
+      );
+    } else if (options.length === 0) {
+      ui.nodes.push(render.emptyEl(t("res_none")));
+    }
+    for (const j of options) {
+      // Clicking a card (body or arrow) picks that train: collapse this leg to its
+      // summary and step to the next one — see pickLeg.
+      const card: HTMLElement = render.journeyEl(j, c, {
+        selected: j === chosen[i],
+        onPick: () => pickLeg(i, card, j),
+        onArrow: () => pickLeg(i, card, j),
+      });
+      if (j === chosen[i]) ui.chosenCard = card;
+      ui.nodes.push(card);
+    }
+    ui.sec.append(...ui.nodes);
   };
   const pickLeg = (i: number, card: HTMLElement, j: Journey): void => {
     chosen[i] = j;
     const ui = legUI[i];
     if (ui) ui.chosenCard = card;
+    // Every later leg now starts from this arrival: re-list each in trip order.
+    for (let k = i + 1; k < legUI.length; k++) {
+      fillLeg(k);
+      setCollapsed(k, legUI[k]!.collapsed);
+    }
     setCollapsed(i, true); // collapse this leg to its summary…
-    const next = legSections[i + 1];
+    const next = legUI[i + 1];
     if (next) {
       // …open the next one and gently reveal it if it's below the fold (never scroll up).
       setCollapsed(i + 1, false);
-      revealElement(next);
+      revealElement(next.sec);
     } else {
       // Last leg chosen → the whole itinerary is settled; open the trip ticket modal.
       showMultiTripModal(
@@ -2207,12 +2259,10 @@ function runMultiCity(c: RenderCtx): void {
   };
   legs.forEach((leg, i) => {
     const opts = { ...filterOpts(), maxConnections: query.maxConnections };
-    const journeys = findJourneys(trains, leg.from, leg.to, leg.date, opts).sort(
-      (a, b) => a.totalDurationMin - b.totalDurationMin || a.departMin - b.departMin,
-    );
-    chosen[i] = journeys[0] ?? null;
+    const journeys = legJourneys(leg);
     // The head is a button: collapsed it shows a ✓ + the picked train's summary;
     // clicking it re-opens the leg to change the choice (the "go back" affordance).
+    // Its name is its content (number, route, date, pick); aria-expanded gives the state.
     const num = el("span", { class: "mc-num", text: String(i + 1) });
     const summary = el("span", { class: "mc-pick-slot" });
     const head = el(
@@ -2220,7 +2270,7 @@ function runMultiCity(c: RenderCtx): void {
       {
         class: "mc-result-head",
         type: "button",
-        attrs: { "aria-expanded": "true", "aria-label": t("mc_toggle") },
+        attrs: { "aria-expanded": "true" },
         on: { click: () => setCollapsed(i, !legUI[i]!.collapsed) },
       },
       [
@@ -2235,39 +2285,16 @@ function runMultiCity(c: RenderCtx): void {
         el("span", { class: "mc-chev", attrs: { "aria-hidden": "true" } }),
       ],
     );
-    const sec = el("section", { class: "mc-result" }, [head]);
     // Which days this leg has a free MAX seat, shown right here in the results so you
     // can see (and pick) an available date without opening the leg's own calendar —
-    // handy when you left the date blank. Clicking a day sets it and re-runs.
+    // including when the chosen day has no train, or none after the previous leg.
+    // Clicking a day sets it and re-runs.
     const legCal = availabilityCalendar(trains, leg.from, leg.to, windowDates, opts);
     const legCtx: RenderCtx = { ...c, onSelectDay: (d) => setLegDate(i, d) };
-    const calEl = journeys.length ? render.calendarEl(legCal, legCtx, leg.date) : null;
-    if (calEl) sec.append(calEl);
-    const cards: HTMLElement[] = [];
-    if (journeys.length === 0) sec.append(render.emptyEl(t("res_none")));
-    else
-      for (const j of journeys) {
-        // Clicking a card (body or arrow) picks that train: collapse this leg to its
-        // summary and step to the next one — see pickLeg.
-        const card: HTMLElement = render.journeyEl(j, c, {
-          selected: j === chosen[i],
-          onPick: () => pickLeg(i, card, j),
-          onArrow: () => pickLeg(i, card, j),
-        });
-        cards.push(card);
-        sec.append(card);
-      }
-    legUI[i] = {
-      head,
-      num,
-      summary,
-      calEl,
-      cards,
-      chosenCard: cards[0] ?? null,
-      collapsed: false,
-      empty: journeys.length === 0,
-    };
-    legSections.push(sec);
+    const calEl = render.calendarEl(legCal, legCtx, leg.date);
+    const sec = el("section", { class: "mc-result" }, [head, calEl]);
+    legUI[i] = { sec, head, num, summary, calEl, journeys, nodes: [], chosenCard: null, collapsed: false, empty: false };
+    fillLeg(i);
     refs.results.append(sec);
     stations.push(leg.from);
     const next = legs[i + 1];
@@ -3244,6 +3271,14 @@ function cycleTripShape(): void {
 
 /** Run a fresh search from the current form (submit or "g" shortcut). */
 function runFromForm(): void {
+  // A Multi-city station nobody could resolve would silently drop its leg or city:
+  // stop on it and say so instead.
+  const unknown = tripType === "multi" ? formApi.invalidStation() : undefined;
+  setSurpriseMsg(unknown ? t("mc_unknown_station") : "");
+  if (unknown) {
+    unknown.focus();
+    return;
+  }
   query = readQueryFromForm();
   applyAndRun();
   // Only swap the phone to the results view when there's something real to show. An
@@ -3463,11 +3498,12 @@ function surpriseMe(): void {
 }
 
 /**
- * "Surprise me" inside the custom-legs editor: fill the last leg's empty destination
- * — or, if every leg is already complete, append one more hop — with a random place
- * that has a direct free-MAX train from the current endpoint on that leg's date, never
- * a city already on the itinerary. Populates the form (staged); the user still hits
- * Search, like every other legs edit.
+ * "Surprise me" inside the custom-legs editor: fill the first leg missing its
+ * destination — or, if every leg is complete, append one more hop — with a random
+ * place that has a direct free-MAX train from that leg's start, never a city already
+ * on the itinerary. The train must leave after the previous leg's default train
+ * arrives, on the first day from then that has one. Populates the form (staged);
+ * the user still hits Search, like every other legs edit.
  */
 function surpriseLeg(): void {
   const raw = formApi.getLegValues(); // [{ from, to, date }] as label strings
@@ -3484,45 +3520,43 @@ function surpriseLeg(): void {
     if (l.to) visited.add(l.to);
   }
   const legs = raw.map((l) => ({ ...l }));
-  const lastIdx = resolved.length - 1;
-  // The "frontier" is the first leg with an origin but no destination yet — that's the
-  // hop Surprise should complete. If every started leg is complete, append a fresh hop
-  // from the itinerary's endpoint. If the editor is empty, bootstrap a random origin so
-  // Surprise can build a whole trip from nothing.
-  const frontier = resolved.findIndex((l) => l.from && !l.to);
-  let originId: string | undefined;
-  let date: string;
-  let target: number; // index in `legs` to write the destination into
-  if (frontier >= 0) {
-    originId = resolved[frontier]!.from;
-    date = resolved[frontier]!.date;
-    target = frontier;
-  } else if (resolved[lastIdx]!.to || resolved[lastIdx]!.from) {
-    originId = resolved[lastIdx]!.to ?? resolved[lastIdx]!.from;
-    date = resolved[lastIdx]!.date;
-    legs.push({ from: deps.registry.label(originId!), to: "", date });
-    target = legs.length - 1;
-  } else {
+  let target = resolved.findIndex((l) => !l.to);
+  if (target < 0) {
+    target = legs.length;
+    legs.push({ from: "", to: "", date: "" });
+  }
+  // Where the traveller stands before this hop: each earlier leg's default train,
+  // chained the way the results list them (runMultiCity).
+  let prev: Journey | null = null;
+  for (const l of resolved.slice(0, target)) {
+    if (l.from && l.to) prev = catchableAfter(legJourneys({ from: l.from, to: l.to, date: l.date }), prev)[0] ?? null;
+  }
+  // The hop starts where it was typed, else where the previous leg ends; an empty
+  // editor starts from a random station, so Surprise can build a whole trip.
+  let originId = resolved[target]?.from ?? resolved[target - 1]?.to;
+  if (!originId) {
     const origins = [...new Set(deps.trains.filter((tr) => tr.available).map((tr) => tr.origin))];
-    originId = origins.length ? origins[Math.floor(Math.random() * origins.length)] : undefined;
-    date = query.date;
-    target = 0;
-    if (originId) legs[0] = { from: deps.registry.label(originId), to: "", date: legs[0]!.date || date };
+    originId = origins[Math.floor(Math.random() * origins.length)];
   }
   if (!originId) {
     setSurpriseMsg(t("surprise_none"));
     return;
   }
-  const reachable = filterTrains(deps.trains, { ...filterOpts(), origin: originId, date });
-  const pool = [...new Set(reachable.map((tr) => tr.destination))].filter((d) => !visited.has(d) && d !== originId);
-  const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : undefined;
-  if (!pick) {
-    setSurpriseMsg(t("surprise_none"));
+  const after = prev ? arrivalDate(prev) : (resolved[target - 1]?.date ?? query.date);
+  const typed = raw[target]?.date ?? "";
+  const fromHere = filterTrains(deps.trains, { ...filterOpts(), origin: originId });
+  const lastDay = addDays(today, BOOKING_WINDOW_DAYS - 1);
+  for (let d = typed > after ? typed : after; d <= lastDay; d = addDays(d, 1)) {
+    const catchable = catchableAfter(fromHere.filter((tr) => tr.date === d), prev);
+    const pool = [...new Set(catchable.map((tr) => tr.destination))].filter((id) => !visited.has(id) && id !== originId);
+    if (pool.length === 0) continue;
+    const pick = pool[Math.floor(Math.random() * pool.length)]!;
+    setSurpriseMsg("");
+    legs[target] = { from: deps.registry.label(originId), to: deps.registry.label(pick), date: d };
+    formApi.setLegs(legs);
     return;
   }
-  setSurpriseMsg("");
-  legs[target] = { ...legs[target]!, to: deps.registry.label(pick) };
-  formApi.setLegs(legs);
+  setSurpriseMsg(t("surprise_none"));
 }
 
 function ensureMap(): Promise<RouteMap> {

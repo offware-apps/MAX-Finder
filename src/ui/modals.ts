@@ -263,16 +263,16 @@ export function showMultiTripModal(legs: render.RecapLeg[], ctx: RenderCtx): voi
 
 /**
  * A saved multi-city tour on one page: the full itinerary with every bookable
- * leg. Map actions are no-ops.
+ * leg. The map sits behind the dialog, so its actions are hidden.
  * @param tour the tour to lay out.
  * @param ctx render context for the tour card.
  */
 export function showTourModal(tour: Tour, ctx: RenderCtx): void {
-  const modalCtx: RenderCtx = { ...ctx, onShowTour: () => {}, onShowJourney: () => {} };
+  const modalCtx: RenderCtx = { ...ctx, onShowJourney: () => {} };
   const dialog = el("dialog", { class: "modal trip-modal" }) as HTMLDialogElement;
   dialog.append(
     el("div", { class: "modal-body" }, [
-      render.tourEl(tour, modalCtx),
+      render.tourEl(tour, modalCtx, true),
       el("div", { class: "modal-actions" }, [closeButton(dialog, "ghost")]),
     ]),
   );
