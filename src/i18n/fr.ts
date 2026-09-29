@@ -77,6 +77,8 @@ export const fr = {
   nearby_to_dest: "Arriver près de {station}",
   nearby_both: "Partir et arriver près",
   nearby_km: "à {km} km",
+  nearby_from_km: "depuis {station} · {km} km",
+  nearby_to_km: "vers {station} · {km} km",
   nearby_none: "Aucune gare voisine n'a de place MAX pour ce trajet.",
   nearby_browse_from: "Des destinations en plus, en payant un court trajet jusqu'à une gare voisine.",
   nearby_browse_to: "Des points de départ en plus qui atteignent une gare proche de votre arrivée — payez un court trajet depuis là.",
@@ -117,6 +119,7 @@ export const fr = {
   res_destinations: "{n} destination(s)",
   res_origins: "{n} origine(s)",
   badge_trains: "{n} train(s)",
+  badge_days: "{n} jour(s)",
 
   lbl_direct: "Direct",
   lbl_airport: "Aéroport",
@@ -223,6 +226,9 @@ export const fr = {
   getaway_count: "{n} aller(s)-retour(s) possible(s)",
   getaway_nights: "{n} nuit(s) sur place",
   getaway_none: "Aucun aller-retour MAX pour ces critères.",
+  getaway_oneway_btn: "Voir les destinations en aller simple",
+  day_with_seats: "Voir le {date} (places libres)",
+  try_nights: "Rester {n} nuit(s) à la place",
 
   act_save: "Enregistrer",
   act_saved: "Enregistré",
@@ -279,7 +285,7 @@ export const fr = {
   cal_legend_return: "nombre = trains au retour",
   res_rt_title: "{origin} ⇄ {destination} · {out} → {ret}",
   rt_return_leg: "Retour",
-  rt_finder_title: "Où s'évader ?",
+  rt_finder_title: "Allers-retours depuis {station} — {date} · {stay}",
   rt_need_origin: "Ajoutez un départ pour voir où aller et revenir.",
   rt_reverse_title: "D’où partir pour rejoindre {station} ?",
   rt_reverse_count: "{n} point(s) de départ possible(s)",
@@ -290,6 +296,7 @@ export const fr = {
   // The reactive availability calendar on the home form (the Trip tab's date picker).
   form_cal_title: "Quand partir ?",
   form_cal_hint: "Choisissez une gare de départ pour voir les jours disponibles.",
+  need_origin: "Choisissez une gare de départ.",
   form_cal_departed: "Départ : {date}",
   // Flexible: the inline calendar becomes a departure→return range picker.
   form_cal_flex_hint: "Choisissez l'aller, puis le retour",

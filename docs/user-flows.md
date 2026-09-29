@@ -17,6 +17,13 @@ search (`deriveMode` in `src/app.ts`; dispatch in `renderSearch`).
 | **Multi-city** (`multi`) | legs or cities | `tour` | a multi-stop tour |
 | **Ideas** (`ideas`) | From | `best` | best destinations, ranked |
 
+A typed or linked station resolves when it spells a station's name, id or alias (accents,
+case, hyphens, brackets and "St"/"Saint" read alike; a station's own name outranks another's
+alias, and the one with trains wins a tie), or when it matches exactly one station. A name
+matching several stations, or none, stops Search: the field turns red and a line under
+Search names it, so `pierre des` never runs from Tours and an unknown arrival never turns
+into a browse from the departure. Search with no departure names that step on the same line.
+
 The **trip-type control** sits beside the date: an **`Aller simple` / `Aller-retour`**
 (one-way / round trip) segmented toggle — the same sliding-pill style as the main tabs.
 When *Aller-retour* is on, a **nights stepper** appears — `[ − ] N [ + ]` with a "Durée sur
@@ -126,6 +133,8 @@ span applied to the lists only, and a day could read green while its list was em
      when the proposed return day has **no free-MAX return**, the return leg and its calendar
      **open by default** (never a collapsed summary hiding an empty list), so the days that
      *do* have a return are visible and one tap away. Pick a return →
+   - **Same day with no round trip that day** → under the empty outbound, a one-tap "Stay N
+     night(s) instead" offers the shortest stay (1–3 nights) that has one that day.
    - **Trip modal** = booking recap: each leg's own **travel date** rides on the ticket header
      (beside "Outbound" / "Return"), and an unmistakable per-leg action — "Book the outbound" /
      "Book the return" (each deep-links SNCF Connect; a connecting leg opens the step modal)
@@ -133,10 +142,17 @@ span applied to the lists only, and a day could read green while its list was em
      exits the flow (step-wise back).
 3. **Only From, One-way** → browse (`runBrowse` "from"). Every destination reachable from the
    station, ranked by how well-served it is, with availability. Tap a card → the exact trip.
-4. **Only From, a stay chosen** → discovery (`runGetaways`), "Where can you get away to?".
-   Destinations ranked by **time at the destination** (hours on site if same-day is best,
-   else nights) + a possible-start-days calendar. Tap a day → narrows to that day
-   (auto-scrolls to results). Tap a destination → opens the round trip.
+   The list reads direct cards, then connection-only ("via") rows, then the radius "Stations
+   within N km" section, whatever the chunked rendering. A nearby row names the station its
+   free leg starts from ("from Massy TGV · 16 km"). An empty day offers a one-tap move to
+   the next day with seats.
+4. **Only From, a stay chosen** → discovery (`runGetaways`), titled with the origin, the day
+   and the stay ("Round trips from Paris — Tue, Sep 29 · Same day"; the mobile search bar
+   repeats it). Destinations ranked by **time at the destination** (hours on site if same-day
+   is best, else nights); the form's calendar shows the possible start days. Tap a day →
+   narrows to that day and scrolls the list into view when it sits below the fold. Tap a
+   destination → opens the round trip. An empty day offers the next day with a round trip
+   and a one-tap switch to one-way.
    - Ranking: `sortGetaways` puts most hours-on-site first for same-day trips.
    - A minimum-on-site gate exists in core (`minOnSiteMin`, default 4h); NOT yet exposed as
      an Advanced control. (Open item.)
@@ -154,8 +170,12 @@ span applied to the lists only, and a day could read green while its list was em
 
 ## Ideas tab (best)
 
-Best free-MAX destinations from the origin, ranked (fastest / most-served / closest…),
-either an all-days overview or one specific day. Tap → open the route.
+Every free-MAX destination from the origin across the booking window (there is no one-day
+view), Recommended (fastest first) by default; the sort picker also ranks by most trains,
+most days, closest, fastest or A–Z.
+Each row shows the changes, the month's train count and the fastest time, plus the days
+reachable or the distance when the sort ranks by it. Tap → the exact trip on the first day
+the destination is reachable, with its calendar open.
 
 ## Cross-cutting (everywhere)
 
@@ -180,6 +200,7 @@ either an all-days overview or one specific day. Tap → open the route.
   of an empty result. A malformed or out-of-window departure date falls back to today; a
   malformed or out-of-window return or finish-by date, and a malformed time filter, are
   dropped. The address bar is then corrected in place (`replaceState`) to match the screen.
+  A link without `card=` (a route page's "open in app") keeps the card saved in Settings.
 - **PWA** — installable; a "new version — reload" postcard on updates.
 
 ## Known open items (see docs/trip-redesign.md for the audit plan)
