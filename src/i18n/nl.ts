@@ -89,7 +89,7 @@ export const nl: Dict = {
   desc_simple: "Vind een exacte reis, of blader door alle bestemmingen vanaf een station (of alle vertrekpunten naar één).",
   desc_multi_plan: "Noem de te bezoeken steden: we ordenen en dateren ze tot een haalbare rondreis.",
   desc_multi_legs: "Stel elk traject zelf samen, station voor station en dag voor dag.",
-  desc_ideas: "Ontdek waar je vanaf een station heen kunt, snelste eerst.",
+  desc_ideas: "Ontdek waar je vanaf een station heen kunt, gerangschikt op aantal gratis treinen.",
   hint_od_optional: "Optioneel: vul vertrek, aankomst, of beide in.",
   radius_hint: "Verbreedt de zoekopdracht naar nabijgelegen stations om meer gratis plaatsen te vinden.",
   act_swap: "Vertrek en aankomst omwisselen",

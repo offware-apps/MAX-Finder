@@ -93,7 +93,7 @@ export const en: Dict = {
   desc_simple: "Find an exact trip, or browse every destination from a station (or every origin to one).",
   desc_multi_plan: "List the cities to visit: we order and date them into a feasible tour.",
   desc_multi_legs: "Build each leg by hand, station by station and date by date.",
-  desc_ideas: "Discover where to go from a station, fastest first.",
+  desc_ideas: "Discover where to go from a station, ranked by how many free trains run.",
   hint_od_optional: "Optional: fill the départ, the arrivée, or both.",
   radius_hint: "Widen the search to nearby stations to surface more free seats.",
   act_swap: "Swap départ and arrivée",

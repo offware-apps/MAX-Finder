@@ -89,7 +89,7 @@ export const it: Dict = {
   desc_simple: "Trova un viaggio preciso, o esplora tutte le destinazioni da una stazione (o tutte le origini verso una).",
   desc_multi_plan: "Elenca le città da visitare: le ordiniamo e le datiamo in un tour fattibile.",
   desc_multi_legs: "Componi ogni tratta a mano, stazione per stazione e data per data.",
-  desc_ideas: "Scopri dove andare da una stazione, prima i più veloci.",
+  desc_ideas: "Scopri dove andare da una stazione, ordinato per numero di treni gratuiti.",
   hint_od_optional: "Facoltativo: compila la partenza, l'arrivo, o entrambi.",
   radius_hint: "Allarga la ricerca alle stazioni vicine per trovare più posti gratuiti.",
   act_swap: "Inverti partenza e arrivo",
