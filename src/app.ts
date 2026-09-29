@@ -3865,6 +3865,11 @@ function buildLayout(root: HTMLElement): void {
     onInstall: () => void promptInstall(),
     onShortcuts: showShortcutsHelp,
     onSettings: openSettings,
+    onSaved: () => {
+      closeHeaderMenu();
+      openSavedPage();
+      setMobileForm(false);
+    },
     onOpenMobileForm: () => setMobileForm(true),
     onSelect: (id) => markSelected(id),
     onPeek: (id) => mapInstance?.peek(id),
@@ -3977,8 +3982,9 @@ function setMobileForm(open: boolean): void {
   const mq = (q: string): boolean => typeof matchMedia === "function" && matchMedia(q).matches;
   const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
   // Morph the collapsed search bar into the full form (and back) on phones, via a
-  // shared view-transition-name; instant everywhere it isn't supported.
+  // shared view-transition-name; instant when the screen stays the same or it isn't supported.
   if (
+    rootRef.dataset.mform !== (open ? "form" : "results") &&
     mq("(max-width: 860px)") &&
     !mq("(prefers-reduced-motion: reduce)") &&
     !settings.reduceMotion &&

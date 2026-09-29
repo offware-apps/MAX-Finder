@@ -197,13 +197,18 @@ the destination is reachable, with its calendar open.
 - **Map** — full-bleed behind a results drawer on mobile, side panel on desktop. Markers per
   destination, hover/selection synced with the list; route line for exact trips; auto-fits
   above the drawer on mobile.
-- **Saved & Favorites** — star a route / save a trip, from the header menu. (The two overlap
-  — a known cleanup item.) A saved trip opens its ticket modal, whose "See all dates" opens
-  the route page; a favorite prefills the Trip tab with that route alone.
+- **Saved & Favorites** — star a route / save a trip. Both cards sit in the results column;
+  on a phone, where the search form hides that column, the header menu's "Saved trips &
+  favorites" entry opens the saved page (every saved trip, the favorites card below it)
+  from any screen. (The two overlap — a known cleanup item.) A saved trip opens its ticket
+  modal, whose "See all dates" opens the route page; a favorite prefills the Trip tab with
+  that route alone.
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
   reduced motion + compact) with a one-time nudge on weak devices; language.
-- **Mobile** — the form is a sheet that collapses to a search bar; results are a bottom-sheet
-  drawer with detents. Back navigation preserves form state and never lands on a dead screen.
+- **Mobile** — the form is a sheet that collapses to a search bar (a long route wraps it to
+  two lines); results are a bottom-sheet drawer with peek / half / full detents measured
+  below that bar, so the full sheet never covers it. Back navigation preserves form state
+  and never lands on a dead screen.
 - **History model** — a genuine navigation (Search, a tab switch, drilling into a route,
   opening the saved page) pushes **one** history entry carrying a snapshot of the form, tab
   included, so browser Back and Forward return to each page with **its own** form intact,

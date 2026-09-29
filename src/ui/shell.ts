@@ -11,6 +11,7 @@ import {
   LOGO_SVG,
   GITHUB_SVG,
   SEARCH_SVG,
+  BOOKMARK_SVG,
   themeSvg,
 } from "./icons";
 
@@ -32,6 +33,7 @@ export interface ShellProps {
   onInstall: () => void;
   onShortcuts: () => void;
   onSettings: () => void;
+  onSaved: () => void;
   onOpenMobileForm: () => void;
   onSelect: (id: string) => void;
   onPeek: (id: string | null) => void;
@@ -93,10 +95,10 @@ let teardownDrawer: (() => void) | null = null;
  * between peek / half / full detents. A no-op where matchMedia is unavailable.
  * @param drawer the drawer element to size.
  * @param handle the grab handle that drives the drag.
- * @param mapSection the map behind the drawer, used to measure available height.
- * @returns a cleanup that removes the media-query/resize listeners it installed.
+ * @param bar the floating search bar; the drawer's full height stops just below it.
+ * @returns a cleanup that removes the listeners and observer it installed.
  */
-function setupDrawer(drawer: HTMLElement, handle: HTMLElement, mapSection: HTMLElement): () => void {
+function setupDrawer(drawer: HTMLElement, handle: HTMLElement, bar: HTMLElement): () => void {
   const mq = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 860px)") : null;
   if (!mq) return () => {};
   const order = ["peek", "half", "full"] as const;
@@ -107,8 +109,7 @@ function setupDrawer(drawer: HTMLElement, handle: HTMLElement, mapSection: HTMLE
   let state: Detent = "half";
 
   const sizes = (): Record<Detent, number> => {
-    const mapTop = mapSection.getBoundingClientRect().top;
-    const full = Math.max(240, Math.round(window.innerHeight - mapTop - 6));
+    const full = Math.max(240, Math.round(window.innerHeight - bar.getBoundingClientRect().bottom - 8));
     const handleH = handle.offsetHeight || 46;
     return {
       peek: Math.max(handleH + 92, Math.round(full * 0.24)),
@@ -120,7 +121,8 @@ function setupDrawer(drawer: HTMLElement, handle: HTMLElement, mapSection: HTMLE
   const snap = (s: Detent): void => {
     state = s;
     drawer.dataset.state = s;
-    if (mq.matches) drawer.style.height = `${sizes()[s]}px`;
+    // The bar only shows in the results view; measured while hidden, every detent is wrong.
+    if (mq.matches && bar.getClientRects().length) drawer.style.height = `${sizes()[s]}px`;
   };
 
   let dragging = false;
@@ -184,7 +186,11 @@ function setupDrawer(drawer: HTMLElement, handle: HTMLElement, mapSection: HTMLE
 
   const sync = (): void => {
     if (mq.matches) {
+      // A layout change resizes the sheet at once; only a tap or a drag animates it.
+      drawer.style.transition = "none";
       snap(state);
+      void drawer.offsetHeight;
+      drawer.style.transition = "";
     } else {
       drawer.style.height = "";
       drawer.style.transition = "";
@@ -192,13 +198,11 @@ function setupDrawer(drawer: HTMLElement, handle: HTMLElement, mapSection: HTMLE
   };
   mq.addEventListener("change", sync);
   window.addEventListener("resize", sync);
-  // The initial sync must wait until the layout is attached: buildShell runs before
-  // buildLayout appends the shell, so a synchronous measure here reads a detached
-  // mapSection (top = 0) and snaps to a too-tall drawer. Defer one frame so `full`
-  // is measured against the real viewport position.
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => sync());
-  else sync();
+  // Re-measure each time the bar appears (entering the results view) or changes height.
+  const ro = typeof ResizeObserver === "function" ? new ResizeObserver(() => sync()) : null;
+  ro?.observe(bar);
   return () => {
+    ro?.disconnect();
     mq.removeEventListener("change", sync);
     window.removeEventListener("resize", sync);
     window.removeEventListener("pointermove", onMove);
@@ -291,6 +295,15 @@ function buildHeader(props: ShellProps): { header: HTMLElement; cardSelect: HTML
     });
   });
 
+  // Saved trips + favorites live in the results column, which a phone hides on the
+  // form screen; this entry opens the saved page from anywhere.
+  const savedBtn = el("button", {
+    class: "ctl saved-btn",
+    type: "button",
+    html: `${BOOKMARK_SVG}<span>${t("menu_saved")}</span>`,
+    on: { click: () => props.onSaved() },
+  });
+
   const ghLink = el("a", {
     class: "ctl icon-ctl gh-link",
     html: GITHUB_SVG,
@@ -303,7 +316,7 @@ function buildHeader(props: ShellProps): { header: HTMLElement; cardSelect: HTML
   // theme, share, shortcuts — lives behind the hamburger to keep the mobile header compact.
   const quickCtls = el("div", { class: "header-quick" }, [cardSel, installBtn, settingsBtn]);
   const headerCtls = el("div", { class: "header-ctls" }, [
-    el("div", { class: "menu-selects" }, [langSel]),
+    el("div", { class: "menu-selects" }, [langSel, savedBtn]),
     el("div", { class: "menu-actions" }, [ghLink, keysBtn, themeBtn, shareBtn]),
   ]);
   const menuBtn = el("button", {
@@ -421,7 +434,7 @@ export function buildShell(props: ShellProps): ShellHandles {
     el("div", { class: "side-col" }, [mapSection]),
   ]);
 
-  teardownDrawer = setupDrawer(resultsDrawer, drawerHandle, mapSection);
+  teardownDrawer = setupDrawer(resultsDrawer, drawerHandle, msearchBar);
 
   results.addEventListener("click", (ev) => {
     const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-station]");
