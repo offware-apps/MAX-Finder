@@ -819,12 +819,6 @@ function isWeekend(iso: string): boolean {
   return day === 0 || day === 6;
 }
 
-/** A calendar as the card sees it: MAX SENIOR is weekday-only, so a weekend is never bookable. */
-function gradeForCard(days: CalendarDay[], card: SearchQuery["card"]): CalendarDay[] {
-  if (card !== "senior") return days;
-  return days.map((d) => (isWeekend(d.date) ? { date: d.date, available: false, count: 0 } : d));
-}
-
 // Wikivoyage language editions that exist; others (e.g. ko) fall back to English.
 const WIKIVOYAGE_LANGS = new Set(["fr", "en", "es", "de", "it", "zh"]);
 
@@ -1523,7 +1517,7 @@ function repaintFormCalendar(): void {
   if (rangeOpt && calOpts) {
     calOpts = { ...calOpts, range: rangeOpt, hint: t("form_cal_flex_hint") };
   }
-  mount.append(render.calendarEl(gradeForCard(cal, fq.card), calCtx, selected, calOpts));
+  mount.append(render.calendarEl(cal, calCtx, selected, calOpts));
 }
 
 /**
@@ -2277,7 +2271,7 @@ function runMultiCity(c: RenderCtx): void {
     // handy when you left the date blank. Clicking a day sets it and re-runs.
     const legCal = availabilityCalendar(trains, leg.from, leg.to, windowDates, opts);
     const legCtx: RenderCtx = { ...c, onSelectDay: (d) => setLegDate(i, d) };
-    const calEl = journeys.length ? render.calendarEl(gradeForCard(legCal, query.card), legCtx, leg.date) : null;
+    const calEl = journeys.length ? render.calendarEl(legCal, legCtx, leg.date) : null;
     if (calEl) sec.append(calEl);
     const cards: HTMLElement[] = [];
     if (journeys.length === 0) sec.append(render.emptyEl(t("res_none")));
@@ -2405,7 +2399,7 @@ function runBestSearch(c: RenderCtx): void {
   // Month-long train count per destination (same figure as the "Where to?" list),
   // so an idea shows how well-served it is before you drill in.
   const stats = windowStats(trains, query.origin, "from", window, filterOpts());
-  // Fastest first (bestTripsAcrossWindow's own order) unless another key is picked.
+  // Sort by trains / days reachable / distance / name; "rec" keeps fastest-first.
   const origin = query.origin;
   const sorted = applySort(trips, {
     name: (tr) => registry.label(tr.destination),
@@ -2417,8 +2411,8 @@ function runBestSearch(c: RenderCtx): void {
   refs.results.append(
     render.listToolbarEl(
       t("res_destinations", { n: trips.length }),
-      query.sort ?? "fastest",
-      sortOptions(["fastest", "trains", "days", "closest", "name"]),
+      query.sort ?? "rec",
+      sortOptions(["rec", "trains", "days", "closest", "fastest", "name"]),
       onSort,
     ),
   );
@@ -2553,7 +2547,7 @@ function runOdSearch(c: RenderCtx): void {
   // Opened from an Ideas one-way tap → show the days you can go up front (calendar open);
   // otherwise it's collapsed behind a one-tap "Départ : … · Changer" summary as usual.
   const odCal = render.collapsibleCalendar(
-    render.calendarEl(gradeForCard(cal, query.card), c, query.date),
+    render.calendarEl(cal, c, query.date),
     "cal-collapsible",
     openOdCalendar,
   );
@@ -2937,7 +2931,7 @@ function runTripSearch(c: RenderCtx): void {
     const refocus = retCalHost.contains(document.activeElement);
     clear(retCalHost);
     retCalHost.append(
-      render.calendarEl(gradeForCard(retCal, query.card), retCtx, retDate, {
+      render.calendarEl(retCal, retCtx, retDate, {
         title: t("rt_inbound"),
         // First cell is same-day (hours on site); every later cell is nights away.
         count: (n, day) => (day.date === query.date ? t("daytrip_cal_hours", { dur: formatDuration(n * 60) }) : t("getaway_nights", { n })),
@@ -3034,7 +3028,7 @@ function runTripSearch(c: RenderCtx): void {
     refreshInPlace();
   };
   const outCalCtx: RenderCtx = { ...c, onSelectDay: onOutboundDay };
-  const outCalEl = render.calendarEl(gradeForCard(outCal, query.card), outCalCtx, query.date, {
+  const outCalEl = render.calendarEl(outCal, outCalCtx, query.date, {
     title: t("getaway_cal_title"),
     count: (n) => (isSameDayTrip ? t("daytrip_cal_hours", { dur: formatDuration(n * 60) }) : t("getaway_nights", { n })),
     countLegend: isSameDayTrip ? t("cal_legend_hours") : t("cal_legend_nights"),
@@ -3217,7 +3211,7 @@ function actionEl(text: string, onClick: () => void): HTMLElement {
 /** The first day after the chosen one, else the first in the window, that `cal` marks
  *  bookable on the query's card. */
 function nextAvailableDay(cal: CalendarDay[]): string | undefined {
-  const open = gradeForCard(cal, query.card).filter((d) => d.available && d.date !== query.date);
+  const open = cal.filter((d) => d.available && d.date !== query.date);
   return (open.find((d) => d.date > query.date) ?? open[0])?.date;
 }
 
@@ -3789,7 +3783,7 @@ function buildLayout(root: HTMLElement): void {
         // connection-aware) instead of the old direct-only undercount.
         cal = reachableCountCalendar(deps.trains, o, dates, opts, "from");
       }
-      if (cal) for (const c of gradeForCard(cal, query.card)) map.set(c.date, c.available ? c.count : 0);
+      if (cal) for (const c of cal) map.set(c.date, c.available ? c.count : 0);
       return map;
     },
     onSwitchTab: switchTab,
@@ -3824,7 +3818,6 @@ function buildLayout(root: HTMLElement): void {
       query = { ...query, card };
       store.updateUrl(query);
       runSearch();
-      repaintFormCalendar(); // a Senior calendar greys its weekends
     },
     onShare: (onCopied) => void shareCurrentUrl(onCopied),
     onInstall: () => void promptInstall(),

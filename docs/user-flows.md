@@ -185,7 +185,8 @@ span applied to the lists only, and a day could read green while its list was em
 ## Ideas tab (best)
 
 Every free-MAX destination from the origin across the booking window (there is no one-day
-view), fastest first; the sort picker also ranks by most trains, most days, closest or A–Z.
+view), Recommended (fastest first) by default; the sort picker also ranks by most trains,
+most days, closest, fastest or A–Z.
 Each row shows the changes, the month's train count and the fastest time, plus the days
 reachable or the distance when the sort ranks by it. Tap → the exact trip on the first day
 the destination is reachable, with its calendar open.
@@ -198,8 +199,7 @@ the destination is reachable, with its calendar open.
 - **Saved & Favorites** — star a route / save a trip, from the header menu. (The two overlap
   — a known cleanup item.)
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
-  reduced motion + compact) with a one-time nudge on weak devices; language. MAX SENIOR is
-  weekday-only, so every calendar greys its weekends (a weekend list keeps its notice).
+  reduced motion + compact) with a one-time nudge on weak devices; language.
 - **Mobile** — the form is a sheet that collapses to a search bar; results are a bottom-sheet
   drawer with detents. Back navigation preserves form state and never lands on a dead screen.
 - **History model** — a genuine navigation (Search, drilling into a route, opening the saved

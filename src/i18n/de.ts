@@ -89,7 +89,7 @@ export const de: Dict = {
   desc_simple: "Finde eine genaue Verbindung oder durchstöbere alle Ziele ab einem Bahnhof (oder alle Startorte zu einem).",
   desc_multi_plan: "Liste die Städte auf: Wir ordnen und datieren sie zu einer machbaren Rundreise.",
   desc_multi_legs: "Stelle jede Etappe selbst zusammen, Bahnhof für Bahnhof und Tag für Tag.",
-  desc_ideas: "Entdecke, wohin du ab einem Bahnhof fahren kannst — die schnellsten zuerst.",
+  desc_ideas: "Entdecke, wohin du ab einem Bahnhof fahren kannst — sortiert nach Anzahl freier Züge.",
   hint_od_optional: "Optional: Fülle Abfahrt, Ankunft oder beides aus.",
   radius_hint: "Erweitert die Suche auf nahe Bahnhöfe, um mehr freie Plätze zu finden.",
   act_swap: "Abfahrt und Ankunft tauschen",

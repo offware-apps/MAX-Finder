@@ -89,7 +89,7 @@ export const zh: Dict = {
   desc_simple: "查找精确行程，或浏览从某车站出发的所有目的地（或前往某车站的所有出发地）。",
   desc_multi_plan: "列出要游览的城市：我们把它们排序并排期成可行的环游。",
   desc_multi_legs: "逐站、逐日手动编排每一段行程。",
-  desc_ideas: "发现从某车站可以去哪里，最快的排在前面。",
+  desc_ideas: "发现从某车站可以去哪里，按免费列车数量排序。",
   hint_od_optional: "可选：填写出发地、到达地，或两者都填。",
   radius_hint: "将搜索扩展到邻近车站，以发现更多免费座位。",
   act_swap: "交换出发地和到达地",
