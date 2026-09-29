@@ -1672,12 +1672,9 @@ a {
   font-weight: 560;
   font-variant-numeric: tabular-nums;
 }
-/* Two chips side by side on an Ideas row (train count + days reachable). */
+/* An Ideas row's chips wrap one by one inside the row's meta line. */
 .row-chips {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex: none;
+  display: contents;
 }
 .chev {
   margin-left: auto;

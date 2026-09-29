@@ -6,6 +6,8 @@ export interface BestTrip {
   journey: Journey;
   /** Days in the window this destination is reachable (set by the all-days view). */
   days?: number;
+  /** The first day in the window it is reachable (set by the all-days view). */
+  firstDate?: string;
 }
 
 /** Distinct stations that appear (as origin or destination) on a given date. */
@@ -46,7 +48,7 @@ export function bestTripsAcrossWindow(
       const cur = found.get(destination);
       // Keep the fastest journey across the whole window, not the earliest day's.
       if (!cur || journey.totalDurationMin < cur.journey.totalDurationMin) {
-        found.set(destination, { destination, journey });
+        found.set(destination, { destination, journey, firstDate: cur?.firstDate ?? date });
       }
     }
   }

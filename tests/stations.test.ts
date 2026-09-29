@@ -114,3 +114,47 @@ describe("StationRegistry lookups", () => {
     expect(registry.label("SOME UNKNOWN GARE")).toBe("Some Unknown Gare");
   });
 });
+
+describe("StationRegistry.resolve", () => {
+  const r = new StationRegistry(stationData as Station[]);
+  r.addMissing([
+    "PARIS (intramuros)",
+    "PAU",
+    "TOURS",
+    "ST PIERRE DES CORPS",
+    "AIX EN PROVENCE TGV",
+    "AIX LES BAINS LE REVARD",
+    "MORLAIX",
+    "MARNE LA VALLEE CHESSY",
+  ]);
+
+  it("reads hyphens, accents, case and St/Saint alike", () => {
+    expect(normalizeText("St-Pierre")).toBe(normalizeText("saint pierre"));
+    expect(normalizeText("Ste-Foy")).toBe("sainte foy");
+  });
+
+  it("resolves a name spelling an id, label or alias, however it is written", () => {
+    expect(r.resolve("Paris")).toBe("PARIS (intramuros)");
+    expect(r.resolve("St-Pierre-des-Corps")).toBe("ST PIERRE DES CORPS");
+    expect(r.resolve("aix")).toBe("AIX EN PROVENCE TGV"); // a curated alias
+  });
+
+  it("prefers a station's own name to another station's alias", () => {
+    // TOURS carries the alias "saint pierre des corps"; the station itself wins.
+    expect(r.resolve("saint pierre des corps")).toBe("ST PIERRE DES CORPS");
+  });
+
+  it("resolves the only station a partial name matches", () => {
+    expect(r.resolve("disneyland")).toBe("MARNE LA VALLEE CHESSY");
+    expect(r.resolve("aix en provence")).toBe("AIX EN PROVENCE TGV");
+    expect(r.resolve("aix les")).toBe("AIX LES BAINS LE REVARD");
+  });
+
+  it("leaves a name matching several stations, or none, unresolved", () => {
+    expect(r.resolve("pierre des")).toBeUndefined();
+    expect(r.resolve("saint pierre")).toBeUndefined();
+    expect(r.resolve("pa")).toBeUndefined();
+    expect(r.resolve("ai")).toBeUndefined();
+    expect(r.resolve("zzz")).toBeUndefined();
+  });
+});

@@ -16,7 +16,7 @@
     "test:e2e": "node scripts/e2e.mjs",
     "screenshot": "node scripts/screenshot.mjs",
     "prerender": "node scripts/prerender.mjs",
-    "generate-pages": "node scripts/generate-pages.mjs",
+    "generate-pages": "tsx scripts/generate-pages.mjs",
     "build:mobile": "tsc --noEmit && vite build --mode capacitor",
     "cap:sync": "npm run build:mobile && cap sync",
     "cap:copy": "npm run build:mobile && cap copy",

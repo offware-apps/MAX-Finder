@@ -2,12 +2,20 @@ import type { Station } from "../types";
 import { CITY_REFERENCE } from "./cities";
 import { NON_BOOKABLE_PATTERNS } from "../config";
 
-/** Lowercase, strip accents/diacritics for tolerant matching. */
+/**
+ * Match key for station and city names, typed, linked or stored: accents and case folded,
+ * hyphens, brackets and commas read as spaces, and "St"/"Ste" as "Saint"/"Sainte", so
+ * "St-Pierre" and "saint pierre" agree, as do "ESSLINGEN(NECKAR)" and "Esslingen Neckar".
+ */
 export function normalizeText(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    .replace(/[-(),]/g, " ")
+    .replace(/\bst\b/g, "saint")
+    .replace(/\bste\b/g, "sainte")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -31,21 +39,6 @@ const AIRPORT_MARKERS = ["AEROPORT", "ROISSY", "CHARLES DE GAULLE", "ST EXUPERY"
 export function isAirportStation(id: string): boolean {
   const u = id.toUpperCase();
   return AIRPORT_MARKERS.some((m) => u.includes(m));
-}
-
-/**
- * Tolerant match key for city resolution: accent/case-folded, hyphens → spaces,
- * "St"/"Ste" → "Saint"/"Sainte". Lets "ST MALO", "Saint-Malo" and "SAINT MALO"
- * all resolve to the same city.
- */
-export function matchNorm(s: string): string {
-  return normalizeText(s)
-    .replace(/[(),]/g, " ") // e.g. "ESSLINGEN(NECKAR)" -> "esslingen neckar"
-    .replace(/-/g, " ")
-    .replace(/\bst\b/g, "saint")
-    .replace(/\bste\b/g, "sainte")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 /** Fallback display name for a station id not present in the registry. */
@@ -78,6 +71,8 @@ export class StationRegistry {
   private cityKeys: { key: string; info: CityInfo }[] = [];
   // Ids actually present in the loaded dataset (i.e. bookable).
   private present = new Set<string>();
+  // Normalised name → station, for resolve(); rebuilt after addMissing().
+  private exact: Map<string, Station> | null = null;
 
   constructor(stations: Station[]) {
     for (const s of stations) this.add(s);
@@ -85,7 +80,7 @@ export class StationRegistry {
     const refMap = new Map<string, CityInfo>();
     const addRef = (name: string | undefined, info: CityInfo): void => {
       if (!name) return;
-      const k = matchNorm(name);
+      const k = normalizeText(name);
       if (k && !refMap.has(k)) refMap.set(k, info);
     };
     // Seed from curated stations (authoritative coords), then the supplementary
@@ -117,7 +112,7 @@ export class StationRegistry {
 
   /** Best city reference matching a station id (whole-word, longest match). */
   private matchCity(id: string): CityInfo | undefined {
-    const n = matchNorm(id);
+    const n = normalizeText(id);
     if (!n) return undefined;
     for (const { key, info } of this.cityKeys) {
       if (n === key || n.startsWith(`${key} `) || n.endsWith(` ${key}`) || n.includes(` ${key} `)) {
@@ -134,6 +129,7 @@ export class StationRegistry {
    * Every id passed here is also recorded as "present" (bookable).
    */
   addMissing(ids: Iterable<string>): void {
+    this.exact = null;
     for (const id of ids) {
       if (!id) continue;
       this.present.add(id);
@@ -152,19 +148,6 @@ export class StationRegistry {
 
   get(id: string): Station | undefined {
     return this.byId.get(id);
-  }
-
-  /** The id a linked name means: a bookable id as is, else the id, label or alias equal to
-   *  it ignoring case, accents and "St"/hyphen spelling, preferring one with trains. */
-  resolve(name: string): string | undefined {
-    if (this.present.has(name)) return name;
-    const n = matchNorm(name);
-    let best: Station | undefined;
-    for (const { station } of this.index) {
-      const names = [station.id, station.label, ...(station.aliases ?? [])];
-      if (names.some((s) => matchNorm(s) === n) && (!best || this.better(station, best))) best = station;
-    }
-    return best?.id;
   }
 
   /** Every registered station (may contain label duplicates). */
@@ -198,6 +181,41 @@ export class StationRegistry {
   coords(id: string): [number, number] | undefined {
     const s = this.byId.get(id);
     return s && Number.isFinite(s.lat) && Number.isFinite(s.lng) ? [s.lat, s.lng] : undefined;
+  }
+
+  /**
+   * The station a name means, typed or linked: a bookable id as is; else the station whose
+   * id, label or alias it spells under {@link normalizeText}; else the only station it
+   * matches. Several matches, or none, leave it unresolved, never a guess.
+   */
+  resolve(name: string): string | undefined {
+    if (this.present.has(name)) return name;
+    const q = normalizeText(name);
+    if (!q) return undefined;
+    this.exact ??= this.exactNames();
+    const exact = this.exact.get(q);
+    if (exact) return exact.id;
+    const hits = this.search(q, 2);
+    return hits.length === 1 ? hits[0]!.id : undefined;
+  }
+
+  /** Every bookable station by its normalised names: an id or label outranks another
+   *  station's alias, and among equal names the station with trains wins. */
+  private exactNames(): Map<string, Station> {
+    const out = new Map<string, Station>();
+    const stations = this.all().filter((s) => !isNonBookable(s.id));
+    const tiers = [(s: Station) => s.aliases ?? [], (s: Station) => [s.id, s.label]];
+    for (const names of tiers) {
+      const tier = new Map<string, Station>();
+      for (const s of stations)
+        for (const n of names(s)) {
+          const k = normalizeText(n);
+          const cur = tier.get(k);
+          if (!cur || this.better(s, cur)) tier.set(k, s);
+        }
+      for (const [k, s] of tier) out.set(k, s); // later tiers overwrite earlier ones
+    }
+    return out;
   }
 
   /** Accent-insensitive, word-prefix-aware autocomplete (deduped by label). */
