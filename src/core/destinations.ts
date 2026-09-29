@@ -52,23 +52,28 @@ export function reachableOrigins(
 }
 
 /**
- * Every station reachable from `anchor` over the WHOLE loaded window (any date),
- * grouped with its total count and fastest direct time. `dir` "from" groups by
- * destination (places you can go), "to" groups by origin (places you can come
- * from). This is the browse list so an idea appears whenever a MAX train runs to
- * it on *any* bookable day, not only the one currently selected.
+ * Every station reachable from `anchor` directly on any of `dates`, grouped with its
+ * train count and fastest direct time over those dates. `dir` "from" groups by
+ * destination (places you can go), "to" groups by origin (places you can come from).
  */
 export function reachableGroups(
   trains: MaxTrain[],
   anchor: string,
   dir: "from" | "to",
+  dates: string[],
   opts: FilterOptions = {},
 ): StationGroup[] {
+  return group(onDates(trains, anchor, dir, dates, opts), (t) => (dir === "from" ? t.destination : t.origin));
+}
+
+/** The direct free-MAX trains from (or into) `anchor` on any of `dates`. */
+function onDates(trains: MaxTrain[], anchor: string, dir: "from" | "to", dates: string[], opts: FilterOptions): MaxTrain[] {
+  const days = new Set(dates);
   const matches =
     dir === "from"
       ? filterTrains(trains, { ...opts, origin: anchor })
       : filterTrains(trains, { ...opts, destination: anchor });
-  return group(matches, (t) => (dir === "from" ? t.destination : t.origin));
+  return matches.filter((t) => days.has(t.date));
 }
 
 /** Total direct free-MAX trains and the distinct days they run on, per station. */
@@ -78,23 +83,20 @@ export interface WindowStat {
 }
 
 /**
- * For an `anchor` station, total direct free-MAX availability over the whole
- * loaded window (all dates), keyed by the other station — destinations when
- * `dir` is "from", origins when "to". Lets the browse list show how many MAX
- * trains run to each place over the bookable horizon, not just on one date.
+ * For an `anchor` station, total direct free-MAX availability over `dates` (the
+ * bookable window), keyed by the other station — destinations when `dir` is "from",
+ * origins when "to". Lets the browse list show how many MAX trains run to each place
+ * over the bookable horizon, not just on one date.
  */
 export function windowStats(
   trains: MaxTrain[],
   anchor: string,
   dir: "from" | "to",
+  dates: string[],
   opts: FilterOptions = {},
 ): Map<string, WindowStat> {
-  const matches =
-    dir === "from"
-      ? filterTrains(trains, { ...opts, origin: anchor })
-      : filterTrains(trains, { ...opts, destination: anchor });
   const acc = new Map<string, { trains: number; days: Set<string> }>();
-  for (const t of matches) {
+  for (const t of onDates(trains, anchor, dir, dates, opts)) {
     const key = dir === "from" ? t.destination : t.origin;
     let e = acc.get(key);
     if (!e) {

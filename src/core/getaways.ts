@@ -106,12 +106,13 @@ export function bestGetawayTo(
   // trip can be same-day [0]; a flexible search walks down to the shortest stay.
   const nightChoices = stayChoices(maxNights, Boolean(opts.flexibleNights), sleeper);
 
-  // Earliest-arriving outbound on the start day (more time at the destination),
-  // unless one was supplied by the caller.
+  // Earliest-arriving outbound on the start day (more time at the destination; ties →
+  // the shorter ride, as the sweeps pick), unless one was supplied by the caller.
   let out = outbound ?? null;
   if (!out) {
     for (const j of findJourneys(trains, origin, dest, date, opts)) {
-      if (!out || journeyArriveAbs(j) < journeyArriveAbs(out)) out = j;
+      const arr = journeyArriveAbs(j);
+      if (!out || arr < journeyArriveAbs(out) || (arr === journeyArriveAbs(out) && j.totalDurationMin < out.totalDurationMin)) out = j;
     }
   }
   if (!out) return null;
@@ -217,8 +218,8 @@ export function getawaysAcrossWindow(
  * origin fanning out to destinations, this fixes the DESTINATION and finds every ORIGIN
  * that has a feasible free-MAX round trip O → destination → O (same-day or an N-night
  * stay) starting each day in `dates`. Candidate origins are the stations that can reach
- * `destination` that day ({@link reachableInto}); each is scored with the tested
- * {@link bestGetawayTo} in the O → destination direction. The result is a
+ * `destination` that day ({@link reachableInto}); each gets the round trip
+ * {@link bestGetawayTo} would give it in the O → destination direction. The result is a
  * {@link GetawaySweep} whose trips are RELABELLED so `.destination` names the discovered
  * ORIGIN (the station listed on each card, its outbound still O → destination), and whose
  * per-day counts / `datesByDest` are keyed by that origin — so the existing getaway list
@@ -235,25 +236,27 @@ export function reverseGetawayIdeas(
   // per-origin bestGetawayTo re-runs findJourneys for every candidate origin and is far
   // too slow for a hub (tens of seconds → a frozen screen). reachableInto gives the
   // outbound INTO the destination per origin in one sweep; reachableJourneys from the
-  // destination on the return day gives the way back per origin in another.
+  // destination on the return day gives the way back per origin in another. Each keeps
+  // what getawayIdeas keeps: the earliest arrival out, the latest return home in time.
   const maxNights = Math.max(0, Math.floor(opts.nights ?? 0));
   const minOnSite = opts.minOnSiteMin ?? SAME_DAY_MIN_ON_SITE_MIN;
   const sleeper = Boolean(opts.onlyNight);
+  const arriveCeil = sleeper ? NIGHT_RETURN_CEIL : opts.lateReturn ? LATE_RETURN_CEIL : MIDNIGHT;
   const nightChoices = stayChoices(maxNights, Boolean(opts.flexibleNights), sleeper);
 
   const byOrigin = new Map<string, Getaway>();
   const datesByDest = new Map<string, string[]>(); // keyed by the discovered origin
   const perDay: CalendarDay[] = [];
   for (const date of dates) {
-    // Outbound INTO the destination: fastest free-MAX journey O → destination whose first
-    // leg departs today, one per origin (a single backward multi-source sweep).
-    const intoMap = reachableInto(trains, destination, date, opts);
+    // Outbound INTO the destination: the earliest-arriving free-MAX journey O → destination
+    // whose first leg departs today, one per origin (a single backward multi-source sweep).
+    const intoMap = reachableInto(trains, destination, date, { ...opts, earliestArrival: true });
     const startable = new Set<string>(); // origins that can round-trip to the destination today
     for (const nights of nightChoices) {
       // The way back leaves the destination on the return day (a sleeper leaves the
       // evening after the last night — one day later), reaching each origin.
       const returnDay = addDays(date, sleeper ? nights + 1 : nights);
-      const returnsMap = reachableJourneys(trains, destination, returnDay, opts);
+      const returnsMap = reachableJourneys(trains, destination, returnDay, opts, arriveCeil);
       if (returnsMap.size === 0) continue;
       for (const [origin, outbound] of intoMap) {
         if (origin === destination || !accept(origin)) continue;
@@ -338,9 +341,10 @@ export function getawaysForDay(
  * if so how much time it buys. A thin wrapper over the tested {@link bestGetawayTo}.
  *
  * `metric: "hours"` counts a SAME-DAY day trip (nights 0) and reports WHOLE HOURS on
- * site; `metric: "nights"` counts a MULTI-DAY round trip (flexible up to the opts
- * ceiling, default 3) and reports NIGHTS away. A day is green ONLY when a bookable
- * round trip of that shape exists.
+ * site, rounded down; `metric: "nights"` counts a MULTI-DAY round trip and reports
+ * NIGHTS away: exactly `opts.nights`, or up to it with `opts.flexibleNights`, or up to
+ * 3 when no nights are given. A day is green ONLY when a bookable round trip of that
+ * shape exists.
  */
 export function stayCalendar(
   trains: MaxTrain[],
@@ -350,15 +354,17 @@ export function stayCalendar(
   opts: GetawayOptions = {},
   metric: "hours" | "nights" = "nights",
 ): CalendarDay[] {
-  // For nights, flexibleNights keeps the longest feasible stay but needs a ceiling to
-  // search up to (maxNights 0 collapses to same-day only) — default up to 3 nights.
+  // Nights 0 would collapse to same-day only, so a nights calendar with no stay length
+  // searches the longest feasible stay up to 3 nights.
   const probe: GetawayOptions =
     metric === "hours"
       ? { ...opts, nights: 0 }
-      : { ...opts, nights: opts.nights && opts.nights > 0 ? opts.nights : 3, flexibleNights: true };
+      : opts.nights && opts.nights > 0
+        ? opts
+        : { ...opts, nights: 3, flexibleNights: true };
   return dates.map((date) => {
     const g = bestGetawayTo(trains, origin, dest, date, probe);
-    const count = !g ? 0 : metric === "hours" ? (g.onSiteMin ? Math.round(g.onSiteMin / 60) : 0) : (g.nights ?? 0);
+    const count = !g ? 0 : metric === "hours" ? Math.floor((g.onSiteMin ?? 0) / 60) : g.nights;
     return { date, available: g != null, count };
   });
 }

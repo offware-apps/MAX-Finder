@@ -876,11 +876,10 @@ describe("app (jsdom smoke)", () => {
     const dayOf = (c: Element | null): string | undefined => c?.querySelector(".cal-day")?.textContent ?? undefined;
     const cellFor = (day: number): HTMLElement | undefined =>
       Array.from(block.querySelectorAll<HTMLElement>(".form-cal-body .cal-cell")).find((c) => Number(dayOf(c)) === day);
-    // First tap = the departure (28). No return yet, so it's the sole selected endpoint
-    // and no day carries the range band yet (staged inline, no navigation).
+    // First tap = the departure (28), run at once so the URL and results follow it.
     cellFor(28)!.click();
     expect(cellFor(28)!.classList.contains("sel")).toBe(true);
-    expect(Array.from(block.querySelectorAll(".form-cal-body .cal-cell.range")).length).toBe(0);
+    expect(new URLSearchParams(location.search).get("date")).toBe("2026-06-28");
     // Second tap on a LATER day = the return (30): sets rdate and highlights the in-between.
     cellFor(30)!.click();
     const params = new URLSearchParams(location.search);

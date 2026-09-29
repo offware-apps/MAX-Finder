@@ -471,6 +471,10 @@ a {
 .input::placeholder {
   color: var(--faint);
 }
+/* A field kept in place but inert (the same-day minimum while Flexible is on). */
+.input:disabled {
+  opacity: 0.45;
+}
 /* A station field whose text matches no real station. */
 .input.is-invalid {
   border-color: #dc2626;
@@ -866,12 +870,15 @@ a {
 .form-cal-toggle:hover {
   border-color: var(--accent);
 }
+/* The picked day sits on its own line under the title in every trip shape, so the longer
+   Flexible range never grows the header when Flexible toggles. */
 .form-cal-heading {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
   min-width: 0;
+  text-align: start;
 }
 .form-cal-title {
   font-weight: 600;
