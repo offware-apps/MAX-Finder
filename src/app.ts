@@ -689,14 +689,17 @@ export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRe
 }
 
 /**
- * Parse the query from the URL and snap its date back into the bookable window. The
- * date <input> is clamped to [today, today+29], so the search form can never produce
- * an out-of-range date — but a stale or shared link can. An out-of-window date would
- * otherwise collapse the ±flex browse window (only the chosen, unbookable day is in
- * range) and skew the exact-trip return calendar, so fall back to today.
+ * Parse the query from the URL, resolve its station names, snap its dates back into the
+ * bookable window, and correct the address bar to match. The date <input> is clamped
+ * to [today, today+29], so the search form can never produce an out-of-range date — but
+ * a stale or shared link can. An out-of-window date would otherwise collapse the ±flex
+ * browse window (only the chosen, unbookable day is in range) and skew the exact-trip
+ * return calendar, so fall back to today.
  */
 function queryFromUrl(): SearchQuery {
-  const q = store.queryFromParams(new URLSearchParams(location.search), today);
+  const params = new URLSearchParams(location.search);
+  const linked = params.toString();
+  const q = store.queryFromParams(params, today);
   const lastBookable = addDays(today, BOOKING_WINDOW_DAYS - 1);
   const inWindow = (d: string): boolean => d >= today && d <= lastBookable;
   if (!inWindow(q.date)) q.date = today;
@@ -713,11 +716,34 @@ function queryFromUrl(): SearchQuery {
   if (q.returnDate && q.mode === "od" && q.returnDate >= q.date && q.stay !== "flexible") {
     q.stay = stayFromNights(dayIndex(q.returnDate) - dayIndex(q.date));
   }
+  // A linked station name ("paris", "LILLE") becomes the id the data uses; a name
+  // matching no station is kept, and renderSearch reports it.
+  const station = (name: string): string => deps.registry.resolve(name) ?? name;
+  if (q.origin) q.origin = station(q.origin);
+  if (q.destination) q.destination = station(q.destination);
+  if (q.via) q.via = station(q.via);
+  q.cities = q.cities?.map(station);
   // Multi-city legs are clamped too: a leg outside the bookable window can never
   // have a free MAX seat, so pull it back to today rather than showing an empty leg.
-  if (q.legs) q.legs = q.legs.map((l) => (inWindow(l.date) ? l : { ...l, date: today }));
+  q.legs = q.legs?.map((l) => ({
+    from: station(l.from),
+    to: station(l.to),
+    date: inWindow(l.date) ? l.date : today,
+  }));
   // The tour "finish by" date only constrains the plan when it's inside the window.
   if (q.tourEndDate && !inWindow(q.tourEndDate)) q.tourEndDate = undefined;
+  // Write every value dropped, clamped or resolved above back into the address bar, in
+  // place, so a reload or a shared link carries what is on screen.
+  const parsed = store.queryToParams(q);
+  for (const key of ["from", "to", "via", "cities", "legs", "date", "rdate", "by", "after", "before", "arrbefore"]) {
+    if (!params.has(key)) continue;
+    const value = parsed.get(key);
+    if (value) params.set(key, value);
+    else params.delete(key);
+  }
+  if (params.toString() !== linked) {
+    history.replaceState(history.state, "", `${location.pathname}?${params.toString()}`);
+  }
   return q;
 }
 
@@ -1813,6 +1839,23 @@ function renderSearch(): void {
     refs.results.append(
       el("button", { class: "back-btn", type: "button", text: `← ${t("act_back")}`, on: { click: goBack } }),
     );
+  }
+
+  // Only a link can name a station the registry lacks (the form resolves to known ids):
+  // say so, rather than "No MAX seat" for a place that does not exist.
+  const unknown = [
+    query.origin,
+    query.destination,
+    query.via,
+    ...(query.cities ?? []),
+    ...(query.legs ?? []).flatMap((l) => [l.from, l.to]),
+  ].find((s) => s && !deps.registry.get(s));
+  if (unknown) {
+    refs.title.textContent = "";
+    refs.results.append(render.emptyEl(t("err_station", { station: unknown })));
+    showBaseMap();
+    updateSearchBar();
+    return;
   }
 
   // MAX SENIOR free tickets are weekday-only — flag a weekend outbound, and (round trip)

@@ -16,6 +16,8 @@ export const en: Dict = {
   datepick_window: "dotted = days within the ± margin",
   err_load: "Couldn't load the data.",
   act_retry: "Retry",
+  err_app: "This page couldn't be opened.",
+  err_station: "Unknown station: “{station}”. Pick one from the list.",
   tagline: "MAX JEUNE / SENIOR seats open for reservation.",
   mode_best: "Ideas",
   best_title_all: "All destinations from {station}",

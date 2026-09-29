@@ -16,6 +16,8 @@ export const zh: Dict = {
   datepick_window: "虚线 = ± 范围内的日期",
   err_load: "无法加载数据。",
   act_retry: "重试",
+  err_app: "无法打开此页面。",
+  err_station: "未知车站：“{station}”。请从列表中选择。",
   tagline: "可预订的 MAX JEUNE / SENIOR 座位。",
   mode_best: "推荐",
   best_title_all: "从{station}出发的所有目的地",

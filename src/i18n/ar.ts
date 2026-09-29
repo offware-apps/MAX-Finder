@@ -16,6 +16,8 @@ export const ar: Dict = {
   datepick_window: "المنقّط = الأيام ضمن هامش ±",
   err_load: "تعذّر تحميل البيانات.",
   act_retry: "إعادة المحاولة",
+  err_app: "تعذّر فتح هذه الصفحة.",
+  err_station: "محطة غير معروفة: «{station}». اختر محطة من القائمة.",
   tagline: "مقاعد MAX JEUNE / SENIOR المتاحة للحجز.",
   mode_best: "أفكار",
   best_title_all: "كل الوجهات من {station}",

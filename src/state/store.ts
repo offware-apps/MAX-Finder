@@ -1,7 +1,7 @@
 import type { SearchQuery, SearchMode, CardType, Journey, SortKey, TripLeg, StayChoice } from "../types";
 import type { Tour } from "../core/tour";
 import { stayFromNights } from "../core/roundtrip";
-import { dayIndex } from "../util/time";
+import { dayIndex, parseTimeToMinutes } from "../util/time";
 import { isLang, detectLang, type Lang } from "../i18n";
 
 /** URL token for a stay choice (compact + stable): stay=day|<N>|flex, where <N> is the
@@ -124,8 +124,20 @@ function sameRoute(a: RoutePair, b: RoutePair): boolean {
   return a.origin === b.origin && a.destination === b.destination;
 }
 
+// Stored lists are checked per element: one malformed entry is dropped instead of
+// crashing every render that reads the list.
+type Stored = Record<string, unknown>;
+
+function isStored(v: unknown): v is Stored {
+  return typeof v === "object" && v !== null;
+}
+
+function isRoutePair(v: unknown): v is RoutePair & Stored {
+  return isStored(v) && typeof v.origin === "string" && typeof v.destination === "string";
+}
+
 export function loadFavorites(): RoutePair[] {
-  return readLS<RoutePair[]>(KEY.favorites, [], Array.isArray);
+  return readLS<unknown[]>(KEY.favorites, [], Array.isArray).filter(isRoutePair);
 }
 
 export function isFavorite(r: RoutePair): boolean {
@@ -142,7 +154,7 @@ export function toggleFavorite(r: RoutePair): RoutePair[] {
 }
 
 export function loadWatched(): RoutePair[] {
-  return readLS<RoutePair[]>(KEY.watched, [], Array.isArray);
+  return readLS<unknown[]>(KEY.watched, [], Array.isArray).filter(isRoutePair);
 }
 
 export function isWatched(r: RoutePair): boolean {
@@ -190,8 +202,30 @@ export function tourId(tour: Tour): string {
   return `tour:${tour.legs.map(journeyKey).join("|")}`;
 }
 
+/** What a saved-trip row and its dialog read: dated endpoints, dated legs, the hub lists. */
+function isJourney(v: unknown): v is Journey {
+  const dated = (x: unknown): x is Stored => isRoutePair(x) && isValidIsoDate(x.date);
+  return (
+    dated(v) &&
+    Array.isArray(v.legs) &&
+    v.legs.length > 0 &&
+    v.legs.every(dated) &&
+    Array.isArray(v.hubs) &&
+    Array.isArray(v.layovers)
+  );
+}
+
+function isSavedTrip(v: unknown): v is SavedTrip {
+  return (
+    isStored(v) &&
+    isJourney(v.outbound) &&
+    (v.inbound == null || isJourney(v.inbound)) &&
+    (v.tour == null || (isStored(v.tour) && Array.isArray(v.tour.legs) && v.tour.legs.every(isJourney)))
+  );
+}
+
 export function loadTrips(): SavedTrip[] {
-  return readLS<SavedTrip[]>(KEY.trips, [], Array.isArray);
+  return readLS<unknown[]>(KEY.trips, [], Array.isArray).filter(isSavedTrip);
 }
 
 export function isTripSaved(id: string): boolean {
@@ -293,6 +327,16 @@ export function queryFromParams(p: URLSearchParams, fallbackDate: string): Searc
   const stayh = Number(p.get("stayh"));
   const clampDay = (n: number, fallback: number): number =>
     Number.isFinite(n) && n >= 1 ? Math.min(14, Math.floor(n)) : fallback;
+  // A malformed date or time is dropped: kept, a date crashes the render and a time
+  // filters out every train while the form shows no filter.
+  const isoDate = (key: string): string | undefined => {
+    const v = p.get(key);
+    return v && isValidIsoDate(v) ? v : undefined;
+  };
+  const time = (key: string): string | undefined => {
+    const v = p.get(key);
+    return v && /^\d{2}:\d{2}$/.test(v) && Number.isFinite(parseTimeToMinutes(v)) ? v : undefined;
+  };
   return {
     mode,
     origin: p.get("from") ?? undefined,
@@ -306,13 +350,13 @@ export function queryFromParams(p: URLSearchParams, fallbackDate: string): Searc
     // Clamp to the stepper's 0..7 range (like setStepper) — an out-of-range link
     // should mean "the widest window", not silently fall back to no flexibility.
     flexDays: Number.isFinite(Number(p.get("flex"))) && Math.floor(Number(p.get("flex"))) >= 1 ? Math.min(7, Math.floor(Number(p.get("flex")))) : undefined,
-    returnDate: p.get("rdate") ?? undefined,
+    returnDate: isoDate("rdate"),
     legs: parseLegs(p.get("legs")),
-    date: p.get("date") ?? fallbackDate,
+    date: isoDate("date") ?? fallbackDate,
     card: p.get("card") === "senior" ? "senior" : "jeune",
-    departAfter: p.get("after") ?? undefined,
-    departBefore: p.get("before") ?? undefined,
-    arriveBefore: p.get("arrbefore") ?? undefined,
+    departAfter: time("after"),
+    departBefore: time("before"),
+    arriveBefore: time("arrbefore"),
     maxDurationMin: Number.isFinite(maxdur) && maxdur > 0 ? maxdur : undefined,
     trainType: p.get("type") ?? undefined,
     maxConnections: Number.isFinite(conn) && conn >= 0 && conn <= 6 ? conn : 1,
@@ -340,7 +384,7 @@ export function queryFromParams(p: URLSearchParams, fallbackDate: string): Searc
     flexNights: p.get("fn") === "1" || undefined,
     stayMinHours: Number.isFinite(stayh) && stayh >= 1 ? Math.min(12, Math.floor(stayh)) : undefined,
     lateReturn: p.get("late") === "1" || undefined,
-    tourEndDate: p.get("by") ?? undefined,
+    tourEndDate: isoDate("by"),
     sort: parseSort(p.get("sort")),
   };
 }
@@ -381,11 +425,11 @@ function parseStay(p: URLSearchParams): StayChoice | undefined {
 // require a real ISO date so both are impossible from a URL.
 const MAX_LEGS = 12;
 
-/** Whether a string is a well-formed, real ISO date (YYYY-MM-DD). */
-function isValidIsoDate(d: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
-  const t = new Date(`${d}T00:00:00`).getTime();
-  return !Number.isNaN(t);
+/** Whether a value is a real calendar date written YYYY-MM-DD (not 2026-10-1 or 2026-02-30). */
+function isValidIsoDate(d: unknown): d is string {
+  if (typeof d !== "string") return false;
+  const t = Date.parse(`${d}T00:00:00Z`);
+  return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === d;
 }
 
 /** Parse the "legs" param (from>to@date, ~-joined) into multi-city legs. */

@@ -16,6 +16,8 @@ export const ja: Dict = {
   datepick_window: "点線 = ±範囲内の日",
   err_load: "データを読み込めませんでした。",
   act_retry: "再試行",
+  err_app: "このページを開けませんでした。",
+  err_station: "不明な駅：「{station}」。リストから選んでください。",
   tagline: "予約できる MAX JEUNE / SENIOR の座席。",
   mode_best: "おすすめ",
   best_title_all: "{station} から行ける全ての行き先",
