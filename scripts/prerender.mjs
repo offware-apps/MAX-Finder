@@ -41,6 +41,9 @@ const page = await browser.newPage();
 await page.evaluateOnNewDocument(() => {
   Object.defineProperty(navigator, "language", { get: () => "fr-FR" });
   Object.defineProperty(navigator, "languages", { get: () => ["fr-FR", "fr"] });
+  // Map off: the snapshot must not carry Leaflet's DOM, a tile <img> or the map chunk's
+  // preload links, or every visitor (low-end mode included) downloads them.
+  localStorage.setItem("mj.settings", JSON.stringify({ map: false }));
 });
 await page.goto(BASE, { waitUntil: "networkidle2", timeout: 60000 });
 await page.waitForFunction(
@@ -65,6 +68,7 @@ server.close();
 // fallback background); hydration re-adds the pill, correctly placed for the real
 // viewport, with no initial animation.
 html = html
+  .replace(/(<html\b[^>]*?)\s+data-map="off"/, "$1")
   .replace(/(<span class="mode-tab-thumb"[^>]*?)\s+style="[^"]*"/g, "$1")
   .replace(/(class="[^"]*?)\s+has-thumb\b/g, "$1")
   .replace(/(class="[^"]*?)\s+animate-thumb\b/g, "$1");
@@ -75,6 +79,7 @@ if (!html.includes('<html lang="fr"')) failures.push("prerendered HTML is not in
 if (!html.includes('id="app"')) failures.push("prerendered HTML lost #app");
 if (!html.includes("application/ld+json")) failures.push("prerendered HTML lost JSON-LD");
 if (!html.includes("<noscript")) failures.push("prerendered HTML lost the noscript fallback");
+if (/leaflet|assets\/map-/.test(html)) failures.push("prerendered HTML carries the map (Leaflet DOM or map chunk)");
 if (failures.length) {
   console.error("PRERENDER FAILED:");
   for (const f of failures) console.error("  ✗ " + f);

@@ -224,6 +224,7 @@ export const de: Dict = {
   act_saved: "Gespeichert",
   act_unsave: "Aus gespeicherten Reisen entfernen",
   saved_title: "Gespeicherte Reisen",
+  menu_saved: "Gespeicherte Reisen & Favoriten",
   saved_see_all: "Alle anzeigen ({n})",
   saved_count: "{n} gespeicherte Reise(n)",
   saved_none: "Noch keine gespeicherten Reisen.",

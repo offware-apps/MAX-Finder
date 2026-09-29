@@ -236,6 +236,7 @@ export const en: Dict = {
   act_saved: "Saved",
   act_unsave: "Remove from saved trips",
   saved_title: "Saved trips",
+  menu_saved: "Saved trips & favorites",
   saved_see_all: "See all ({n})",
   saved_count: "{n} saved trip(s)",
   saved_none: "No saved trips yet.",

@@ -223,6 +223,7 @@ export const pt: Dict = {
   act_saved: "Guardado",
   act_unsave: "Remover das viagens guardadas",
   saved_title: "Viagens guardadas",
+  menu_saved: "Viagens guardadas e favoritos",
   saved_see_all: "Ver tudo ({n})",
   saved_count: "{n} viagem(ns) guardada(s)",
   saved_none: "Ainda não há viagens guardadas.",
