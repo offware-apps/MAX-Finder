@@ -223,6 +223,7 @@ export const ar: Dict = {
   act_saved: "محفوظ",
   act_unsave: "إزالة من الرحلات المحفوظة",
   saved_title: "الرحلات المحفوظة",
+  menu_saved: "الرحلات المحفوظة والمفضلة",
   saved_see_all: "عرض الكل ({n})",
   saved_count: "{n} رحلة محفوظة",
   saved_none: "لا توجد رحلات محفوظة بعد.",

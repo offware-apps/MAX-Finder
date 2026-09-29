@@ -224,6 +224,7 @@ export const ko: Dict = {
   act_saved: "저장됨",
   act_unsave: "저장한 여행에서 제거",
   saved_title: "저장한 여행",
+  menu_saved: "저장한 여행 및 즐겨찾기",
   saved_see_all: "전체 보기 ({n})",
   saved_count: "저장한 여행 {n}개",
   saved_none: "아직 저장한 여행이 없습니다.",

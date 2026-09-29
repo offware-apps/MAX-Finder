@@ -223,6 +223,7 @@ export const zh: Dict = {
   act_saved: "已保存",
   act_unsave: "从已保存行程中移除",
   saved_title: "已保存行程",
+  menu_saved: "已保存行程和收藏",
   saved_see_all: "查看全部 ({n})",
   saved_count: "{n} 个已保存行程",
   saved_none: "暂无已保存行程。",

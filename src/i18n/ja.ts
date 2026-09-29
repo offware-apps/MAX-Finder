@@ -223,6 +223,7 @@ export const ja: Dict = {
   act_saved: "保存済み",
   act_unsave: "保存した旅程から削除",
   saved_title: "保存した旅程",
+  menu_saved: "保存した旅程とお気に入り",
   saved_see_all: "すべて表示 ({n})",
   saved_count: "保存した旅程 {n} 件",
   saved_none: "保存した旅程はまだありません。",

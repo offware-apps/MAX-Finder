@@ -234,6 +234,7 @@ export const fr = {
   act_saved: "Enregistré",
   act_unsave: "Retirer des trajets enregistrés",
   saved_title: "Trajets enregistrés",
+  menu_saved: "Trajets enregistrés et favoris",
   saved_see_all: "Voir tout ({n})",
   saved_count: "{n} trajet(s) enregistré(s)",
   saved_none: "Aucun trajet enregistré pour l'instant.",

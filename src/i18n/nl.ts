@@ -223,6 +223,7 @@ export const nl: Dict = {
   act_saved: "Opgeslagen",
   act_unsave: "Verwijderen uit opgeslagen reizen",
   saved_title: "Opgeslagen reizen",
+  menu_saved: "Opgeslagen reizen & favorieten",
   saved_see_all: "Alles bekijken ({n})",
   saved_count: "{n} opgeslagen reis(zen)",
   saved_none: "Nog geen opgeslagen reizen.",
