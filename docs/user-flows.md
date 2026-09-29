@@ -91,18 +91,20 @@ stays as the exact-date / ±flex keyboard entry for power users.
 **In Flexible mode the same inline calendar becomes a departure→return RANGE picker**
 (`pickFormRange`, driven by `calendarEl`'s `range` option). The **first tap sets the
 departure** and arms the calendar for the return (`formRangeAwait`); the **next tap on/after
-it sets the return** — `query.returnDate` with `stay: "flexible"` — while an earlier tap just
-restarts. A **third tap begins a fresh range**. Every tap runs like a single-day pick (in
-place for the same route), so the header, the date pill, the URL and the results always
-agree: on an exact route the first tap keeps the current span as the return until the
-second tap moves it, and a link with no `rdate` shows the departure + 2 its results propose.
-The days between the two endpoints (both `.sel`) get a `.range` band, and while the return
-is being chosen hovering previews the pending span (`.preview`). The days count outbound
-trains, and while the return is awaited they count return trains, the days before the
-departure greyed (a tap there restarts). The collapsed header spells out the two endpoints
-("Aller: … → Retour: …", or a "choose the return" prompt in discovery, which proposes no
-return); `syncFormFromQuery` restores the highlighted range from `stay=flex` + `rdate`. Fixed-nights and one-way modes keep the single-date departure picker; only Flexible
-turns on range selection. The results-page return calendar still handles the return too —
+it sets the return** — `query.returnDate` with `stay: "flexible"` — and (route complete) runs
+the flexible round trip in place, while an earlier tap just restarts. A **third tap begins a
+fresh range**. The first tap stays on the form: the header reads the departure as pending
+("choose the return") while the URL and the results keep the range already on screen, and
+the return tap runs the new range. A link with no `rdate` shows the departure + 2 its
+results propose, in the header and the range too. The days between the two endpoints (both
+`.sel`) get a `.range` band, and while the return is being chosen hovering previews the
+pending span (`.preview`). The days count outbound trains, and while the return is awaited
+they count return trains, the days before the departure greyed (a tap there restarts). The
+collapsed header spells out the two endpoints ("Aller: … → Retour: …", or a "choose the
+return" prompt while the return is awaited and in discovery, which proposes no return);
+`syncFormFromQuery` restores the highlighted range from `stay=flex` + `rdate`. Fixed-nights
+and one-way modes keep the single-date departure picker; only Flexible turns on range
+selection. The results-page return calendar still handles the return too —
 this only adds the pick on the **first page**.
 
 **Max correspondances** (0 / 1 / 2 / 3 / no limit) is a **main-form field**, not buried in
@@ -132,8 +134,7 @@ span applied to the lists only, and a day could read green while its list was em
    - **Leg 2 Return** opens (gently revealed only if below the fold — a calendar tap never
      scrolls the drawer up) — a return calendar whose **first cell is the same day** (hours
      on site), later cells are nights at the destination, pre-selected to the stay's return.
-     The list puts first the latest return home by midnight (the most time there — the same
-     trip a discovery card counts), and a stay from the last bookable day keeps its return
+     A stay's list is fastest first, and a stay from the last bookable day keeps its return
      past the window, where the return leg says there is none.
      For a **fixed** N-night stay the return is derived with no second question, so its
      calendar is **collapsed by default** behind a "Return: <date> · Change" toggle (same
@@ -164,6 +165,9 @@ span applied to the lists only, and a day could read green while its list was em
    destination → opens the round trip. An empty day offers the next day with a round trip
    and a one-tap switch to one-way.
    - Ranking: `sortGetaways` puts most hours-on-site first for same-day trips.
+   - A card's travel time is the trip it opens: a stay counts that trip's default return,
+     the fastest on the return day (`asOpened`); a same-day card counts the latest return
+     home by midnight, as the trip does.
    - A minimum-on-site gate exists in core (`minOnSiteMin`, default 4h); NOT yet exposed as
      an Advanced control. (Open item.)
 5. **Only To** → reverse browse (`runBrowse` "to"): where you can come *from* to reach the

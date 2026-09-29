@@ -195,21 +195,24 @@ describe("a green day and a number tell the truth (app)", () => {
     expect(formSelected(root)).toEqual(["2026-06-25", "2026-06-27"]);
     expect(root.querySelector(".nights-val")!.textContent).toBe("2 nights");
 
-    // First tap: a new departure, run at once, keeping the 2-night span until the return tap.
+    // First tap: the departure, pending on the form; the URL and the results keep their range.
+    const shown = title(root);
     formCell(root, "2026-06-26").click();
-    expect(param("date")).toBe("2026-06-26");
-    expect(param("rdate")).toBe("2026-06-28");
-    expect((root.querySelector('.search-form input[type="date"]') as HTMLInputElement).value).toBe("2026-06-26");
-    expect(picked(root).endsWith(ret())).toBe(true);
-    expect(formSelected(root)).toEqual(["2026-06-26", "2026-06-28"]);
+    expect(param("date")).toBe("2026-06-25");
+    expect(title(root)).toBe(shown);
+    expect(picked(root)).toBe("Departure: Fri, Jun 26 — pick the return");
+    expect(formSelected(root)).toEqual(["2026-06-26"]);
     // While the return is awaited, a day before the departure is not a return day.
     expect(formCell(root, "2026-06-25").classList.contains("ok")).toBe(false);
     expect(formCell(root, "2026-06-27").classList.contains("ok")).toBe(true);
 
-    // Second tap: the return.
+    // Second tap: the return, run with the departure.
     formCell(root, "2026-06-29").click();
+    expect(param("date")).toBe("2026-06-26");
     expect(param("rdate")).toBe("2026-06-29");
+    expect(title(root)).not.toBe(shown);
     expect(picked(root).endsWith(ret())).toBe(true);
+    expect(formSelected(root)).toEqual(["2026-06-26", "2026-06-29"]);
     expect(root.querySelector(".nights-val")!.textContent).toBe("3 nights");
   });
 
@@ -234,12 +237,20 @@ describe("a green day and a number tell the truth (app)", () => {
     expect(root.querySelector(".return-list .empty")).not.toBeNull();
   });
 
-  it("a stay's default return is the latest home by midnight, as its discovery card counts", () => {
-    const root = setup(`?${route}&date=2026-06-27&stay=1`);
-    const first = root.querySelector(".return-list .journey");
-    expect(first?.textContent).toContain("21:00");
-    const card = getawayIdeas(normalizeRecords(fixture), P, ["2026-06-27"], { maxConnections: 1, nights: 1 }).trips[0]!;
-    expect(root.querySelector(".rt-total")!.textContent).toContain(formatDuration(card.travelMin));
+  it("a stay's discovery card counts the return its trip picks by default, the fastest", () => {
+    // The sweep's latest return home by midnight (21:00, 2 h 30) is not the fastest (19:26, 2 h).
+    const records = [
+      row("2026-06-27", P, L, "07:00", "09:00", "OUT"),
+      row("2026-06-28", L, P, "19:26", "21:26", "FAST"),
+      row("2026-06-28", L, P, "21:00", "23:30", "LATE"),
+    ];
+    const root = setup(`?mode=from&from=${encodeURIComponent(P)}&date=2026-06-27&stay=1`, records);
+    const card = root.querySelector<HTMLElement>(`.results .group-card[data-station="${L}"]`)!;
+    const total = new RegExp(`${formatDuration(240)}(?!\\d)`); // 4 h, not 4 h 30
+    expect(card.querySelector(".dest-meta bdi")!.textContent).toBe(formatDuration(240));
+    card.querySelector<HTMLElement>(".dest-main")!.click();
+    expect(root.querySelector(".return-list .journey")?.textContent).toContain("19:26");
+    expect(root.querySelector(".rt-total")!.textContent).toMatch(total);
   });
 
   it("a discovery card shows the exact time on site of the trip it opens", () => {

@@ -160,7 +160,7 @@ function stayChoices(maxNights: number, flexible: boolean, sleeper: boolean): nu
 }
 
 /** Rank: most nights, then most time on site (same-day) / least travel (stays). */
-function sortGetaways(a: Getaway, b: Getaway): number {
+export function sortGetaways(a: Getaway, b: Getaway): number {
   return (
     b.nights - a.nights ||
     (a.nights === 0 ? (b.onSiteMin ?? 0) - (a.onSiteMin ?? 0) : a.travelMin - b.travelMin)
