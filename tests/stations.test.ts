@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Station } from "../src/types";
 import { StationRegistry, normalizeText, prettyLabel, isAirportStation } from "../src/data/stations";
+import { haversineKm } from "../src/util/geo";
 import stationData from "../data/stations.json";
 
 const registry = new StationRegistry(stationData as Station[]);
@@ -77,6 +78,20 @@ describe("StationRegistry.addMissing", () => {
     r.addMissing(["BRUXELLES MIDI", "TGV HAUTE PICARDIE"]);
     expect(r.city("BRUXELLES MIDI")).toBe("Bruxelles"); // via city reference
     expect(r.city("TGV HAUTE PICARDIE")).toBe("Haute-Picardie");
+  });
+
+  it("plots an out-of-town station at the station, not at its city centre", () => {
+    const r = new StationRegistry(stationData as Station[]);
+    r.addMissing(["LYON ST EXUPERY TGV.", "LYON (intramuros)", "VALENCE TGV AUVERGNE RHONE ALPES", "VALENCE VILLE", "CALAIS FRETHUN", "CALAIS VILLE", "TOURS", "ST PIERRE DES CORPS", "MARSEILLE ST CHARLES", "MARSEILLE BLANCARDE", "LES AUBRAIS ORLEANS"]);
+    const km = (a: string, b: string): number => haversineKm(r.coords(a)!, r.coords(b)!);
+    expect(km("LYON ST EXUPERY TGV.", "LYON (intramuros)")).toBeGreaterThan(15);
+    expect(km("VALENCE TGV AUVERGNE RHONE ALPES", "VALENCE VILLE")).toBeGreaterThan(8);
+    expect(km("CALAIS FRETHUN", "CALAIS VILLE")).toBeGreaterThan(5);
+    // Two stations of one town on one point hide each other from the nearby search.
+    expect(km("TOURS", "ST PIERRE DES CORPS")).toBeGreaterThan(2);
+    expect(km("MARSEILLE ST CHARLES", "MARSEILLE BLANCARDE")).toBeGreaterThan(2);
+    expect(r.city("LYON ST EXUPERY TGV.")).toBe("Lyon"); // guide link still opens the city
+    expect(r.city("LES AUBRAIS ORLEANS")).toBe("Orléans");
   });
 
   it("dedupes label collisions, preferring the id present in the dataset", () => {
