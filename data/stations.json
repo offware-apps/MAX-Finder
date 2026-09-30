@@ -32,7 +32,7 @@
   { "id": "GRENOBLE", "label": "Grenoble", "city": "Grenoble", "lat": 45.1910, "lng": 5.7146, "region": "Auvergne-Rhône-Alpes" },
   { "id": "CHAMBERY CHALLES LES EAUX", "label": "Chambéry", "city": "Chambéry", "lat": 45.5710, "lng": 5.9203, "region": "Auvergne-Rhône-Alpes", "aliases": ["chambery"] },
   { "id": "ANNECY", "label": "Annecy", "city": "Annecy", "lat": 45.9020, "lng": 6.1206, "region": "Auvergne-Rhône-Alpes" },
-  { "id": "VALENCE TGV", "label": "Valence TGV", "city": "Valence", "lat": 44.9333, "lng": 4.9783, "region": "Auvergne-Rhône-Alpes", "aliases": ["valence"] },
+  { "id": "VALENCE TGV", "label": "Valence TGV", "city": "Valence", "lat": 44.9915, "lng": 4.9787, "region": "Auvergne-Rhône-Alpes", "aliases": ["valence"] },
   { "id": "PERPIGNAN", "label": "Perpignan", "city": "Perpignan", "lat": 42.6970, "lng": 2.8796, "region": "Occitanie" },
   { "id": "BREST", "label": "Brest", "city": "Brest", "lat": 48.3904, "lng": -4.4861, "region": "Bretagne" },
   { "id": "QUIMPER", "label": "Quimper", "city": "Quimper", "lat": 47.9960, "lng": -4.0916, "region": "Bretagne" },
@@ -43,5 +43,14 @@
   { "id": "BAYONNE", "label": "Bayonne", "city": "Bayonne", "lat": 43.4960, "lng": -1.4730, "region": "Nouvelle-Aquitaine" },
   { "id": "PAU", "label": "Pau", "city": "Pau", "lat": 43.2951, "lng": -0.3708, "region": "Nouvelle-Aquitaine" },
   { "id": "BELFORT MONTBELIARD TGV", "label": "Belfort-Montbéliard TGV", "city": "Belfort", "lat": 47.5862, "lng": 6.8997, "region": "Bourgogne-Franche-Comté" },
-  { "id": "LE CREUSOT MONTCEAU MONTCHANIN", "label": "Le Creusot TGV", "city": "Le Creusot", "lat": 46.7903, "lng": 4.4250, "region": "Bourgogne-Franche-Comté" }
+  { "id": "LE CREUSOT MONTCEAU MONTCHANIN", "label": "Le Creusot TGV", "city": "Le Creusot", "lat": 46.7653, "lng": 4.4995, "region": "Bourgogne-Franche-Comté" },
+  { "id": "LYON ST EXUPERY TGV.", "label": "Lyon St-Exupéry TGV", "city": "Lyon", "lat": 45.7211, "lng": 5.0750, "region": "Auvergne-Rhône-Alpes" },
+  { "id": "VALENCE VILLE", "label": "Valence Ville", "city": "Valence", "lat": 44.9280, "lng": 4.8933, "region": "Auvergne-Rhône-Alpes" },
+  { "id": "AVIGNON CENTRE", "label": "Avignon Centre", "city": "Avignon", "lat": 43.9419, "lng": 4.8053, "region": "Provence-Alpes-Côte d'Azur" },
+  { "id": "LES ARCS DRAGUIGNAN", "label": "Les Arcs-Draguignan", "city": "Draguignan", "lat": 43.4555, "lng": 6.4825, "region": "Provence-Alpes-Côte d'Azur" },
+  { "id": "NIMES PONT DU GARD", "label": "Nîmes Pont-du-Gard", "city": "Nîmes", "lat": 43.8168, "lng": 4.5077, "region": "Occitanie" },
+  { "id": "MONTPELLIER SUD DE FRANCE", "label": "Montpellier Sud-de-France", "city": "Montpellier", "lat": 43.5948, "lng": 3.9246, "region": "Occitanie" },
+  { "id": "BESANCON FRANCHE COMTE TGV", "label": "Besançon Franche-Comté TGV", "city": "Besançon", "lat": 47.3074, "lng": 5.9532, "region": "Bourgogne-Franche-Comté" },
+  { "id": "MACON LOCHE TGV", "label": "Mâcon-Loché TGV", "city": "Mâcon", "lat": 46.2829, "lng": 4.7789, "region": "Bourgogne-Franche-Comté" },
+  { "id": "CALAIS FRETHUN", "label": "Calais-Fréthun", "city": "Calais", "lat": 50.9012, "lng": 1.8109, "region": "Hauts-de-France" }
 ]
