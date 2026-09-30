@@ -19,7 +19,7 @@
   { "id": "TOULON", "label": "Toulon", "city": "Toulon", "lat": 43.1283, "lng": 5.9300, "region": "Provence-Alpes-Côte d'Azur" },
   { "id": "ANGERS SAINT LAUD", "label": "Angers St-Laud", "city": "Angers", "lat": 47.4647, "lng": -0.5566, "region": "Pays de la Loire", "aliases": ["angers"] },
   { "id": "LE MANS", "label": "Le Mans", "city": "Le Mans", "lat": 47.9957, "lng": 0.1929, "region": "Pays de la Loire" },
-  { "id": "TOURS", "label": "Tours", "city": "Tours", "lat": 47.3900, "lng": 0.6940, "region": "Centre-Val de Loire", "aliases": ["saint pierre des corps"] },
+  { "id": "TOURS", "label": "Tours", "city": "Tours", "lat": 47.3900, "lng": 0.6940, "region": "Centre-Val de Loire" },
   { "id": "POITIERS", "label": "Poitiers", "city": "Poitiers", "lat": 46.5802, "lng": 0.3338, "region": "Nouvelle-Aquitaine" },
   { "id": "ANGOULEME", "label": "Angoulême", "city": "Angoulême", "lat": 45.6519, "lng": 0.1640, "region": "Nouvelle-Aquitaine" },
   { "id": "LA ROCHELLE VILLE", "label": "La Rochelle", "city": "La Rochelle", "lat": 46.1530, "lng": -1.1455, "region": "Nouvelle-Aquitaine", "aliases": ["la rochelle"] },
@@ -52,5 +52,8 @@
   { "id": "MONTPELLIER SUD DE FRANCE", "label": "Montpellier Sud-de-France", "city": "Montpellier", "lat": 43.5948, "lng": 3.9246, "region": "Occitanie" },
   { "id": "BESANCON FRANCHE COMTE TGV", "label": "Besançon Franche-Comté TGV", "city": "Besançon", "lat": 47.3074, "lng": 5.9532, "region": "Bourgogne-Franche-Comté" },
   { "id": "MACON LOCHE TGV", "label": "Mâcon-Loché TGV", "city": "Mâcon", "lat": 46.2829, "lng": 4.7789, "region": "Bourgogne-Franche-Comté" },
-  { "id": "CALAIS FRETHUN", "label": "Calais-Fréthun", "city": "Calais", "lat": 50.9012, "lng": 1.8109, "region": "Hauts-de-France" }
+  { "id": "CALAIS FRETHUN", "label": "Calais-Fréthun", "city": "Calais", "lat": 50.9012, "lng": 1.8109, "region": "Hauts-de-France" },
+  { "id": "ST PIERRE DES CORPS", "label": "St-Pierre-des-Corps", "city": "Tours", "lat": 47.3861, "lng": 0.7236, "region": "Centre-Val de Loire", "aliases": ["saint pierre des corps"] },
+  { "id": "MARSEILLE BLANCARDE", "label": "Marseille Blancarde", "city": "Marseille", "lat": 43.2961, "lng": 5.4066, "region": "Provence-Alpes-Côte d'Azur" },
+  { "id": "LES AUBRAIS ORLEANS", "label": "Les Aubrais-Orléans", "city": "Orléans", "lat": 47.9268, "lng": 1.9066, "region": "Centre-Val de Loire" }
 ]

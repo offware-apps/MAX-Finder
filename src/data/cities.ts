@@ -130,7 +130,6 @@ export const CITY_REFERENCE: CityRef[] = [
   { name: "Redon", lat: 47.651, lng: -2.085, region: "Bretagne" },
   { name: "Auray", lat: 47.668, lng: -2.985, region: "Bretagne" },
   // --- Centre-Val de Loire ---------------------------------------------------
-  { name: "Orléans", lat: 47.902, lng: 1.905, region: "Centre-Val de Loire" },
   { name: "Blois", lat: 47.587, lng: 1.333, region: "Centre-Val de Loire", aliases: ["blois chambord"] },
   { name: "Bourges", lat: 47.084, lng: 2.396, region: "Centre-Val de Loire" },
   { name: "Châteauroux", lat: 46.811, lng: 1.69, region: "Centre-Val de Loire" },
