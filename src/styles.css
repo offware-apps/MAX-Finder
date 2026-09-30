@@ -4366,6 +4366,9 @@ select.input::-ms-expand {
   .site-header {
     flex-wrap: nowrap;
     gap: 0.5rem;
+    /* One square size for the row. 184px is 53px of padding and gaps plus the
+       131px that fits "MAX SENIOR"; below 360px the squares shrink instead. */
+    --hdr-ctl: clamp(34px, (100vw - 184px) / 4, 44px);
   }
   .brand-badge {
     display: none;
@@ -4392,13 +4395,19 @@ select.input::-ms-expand {
   .header-quick select.ctl {
     flex: 1;
     min-width: 0;
-    min-height: 44px;
+    height: var(--hdr-ctl);
     font-size: 0.95rem;
     font-weight: 600;
   }
-  .header-quick .icon-ctl {
-    width: 42px;
-    min-height: 44px;
+  /* Install carries no .icon-ctl and the menu sits outside .header-quick, so
+     each is named here beside Settings. */
+  .site-header .logo,
+  .header-quick .icon-ctl,
+  .header-quick .install-btn,
+  .header-nav > .menu-btn {
+    width: var(--hdr-ctl);
+    height: var(--hdr-ctl);
+    padding: 0;
     flex: none;
   }
   .header-quick .install-label {
