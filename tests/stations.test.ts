@@ -82,10 +82,11 @@ describe("StationRegistry.addMissing", () => {
 
   it("plots an out-of-town station at the station, not at its city centre", () => {
     const r = new StationRegistry(stationData as Station[]);
-    r.addMissing(["LYON ST EXUPERY TGV.", "LYON (intramuros)", "VALENCE TGV AUVERGNE RHONE ALPES", "VALENCE VILLE"]);
+    r.addMissing(["LYON ST EXUPERY TGV.", "LYON (intramuros)", "VALENCE TGV AUVERGNE RHONE ALPES", "VALENCE VILLE", "CALAIS FRETHUN", "CALAIS VILLE"]);
     const km = (a: string, b: string): number => haversineKm(r.coords(a)!, r.coords(b)!);
     expect(km("LYON ST EXUPERY TGV.", "LYON (intramuros)")).toBeGreaterThan(15);
     expect(km("VALENCE TGV AUVERGNE RHONE ALPES", "VALENCE VILLE")).toBeGreaterThan(8);
+    expect(km("CALAIS FRETHUN", "CALAIS VILLE")).toBeGreaterThan(5);
     expect(r.city("LYON ST EXUPERY TGV.")).toBe("Lyon"); // guide link still opens the city
   });
 

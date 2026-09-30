@@ -24,6 +24,7 @@ export const CITY_REFERENCE: CityRef[] = [
   { name: "Douai", lat: 50.38, lng: 3.083, region: "Hauts-de-France" },
   { name: "Valenciennes", lat: 50.358, lng: 3.516, region: "Hauts-de-France" },
   { name: "Dunkerque", lat: 51.035, lng: 2.371, region: "Hauts-de-France" },
+  { name: "Calais", lat: 50.951, lng: 1.857, region: "Hauts-de-France", aliases: ["calais ville"] },
   { name: "Béthune", lat: 50.53, lng: 2.641, region: "Hauts-de-France" },
   { name: "Lens", lat: 50.432, lng: 2.831, region: "Hauts-de-France" },
   { name: "Saint-Quentin", lat: 49.848, lng: 3.287, region: "Hauts-de-France" },
