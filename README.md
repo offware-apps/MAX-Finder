@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/offware-apps/.github/main/profile/logo.png" alt="Offware" width="72">
+
 # MAX Finder
 
 **Find every SNCF train where a free MAX JEUNE / MAX SENIOR (ex-TGVmax) seat is actually reservable — instead of checking SNCF Connect one route at a time.**
