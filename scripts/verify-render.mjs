@@ -3,7 +3,8 @@
  *
  * Serves ./dist and loads it in headless Chromium (home + a deep-link). Fails
  * (exit 1) if #app stays effectively empty or any uncaught page error fires, so
- * a build that would show a blank page can never reach production.
+ * a build that would show a blank page can never reach production. It also
+ * fails when the controls in the phone header row differ in size.
  *
  *   npm run build && npm run verify
  */
@@ -75,6 +76,31 @@ for (const { name, url } of pages) {
   console.log(`  ${name}: #app=${appLen} chars, errors=${errors.length}`);
   await page.close();
 }
+
+// Phone header: every visible control in the one-line row shares one height, and
+// every control but the pass select shares one width.
+const phone = await browser.newPage();
+for (const width of [360, 390]) {
+  // Only a change of isMobile/hasTouch reloads the page; a width change reflows it.
+  await phone.setViewport({ width, height: 844, isMobile: true, hasTouch: true });
+  if (width === 360) {
+    await phone.goto(BASE, { waitUntil: "load", timeout: 45000 });
+    await phone.waitForSelector(".header-quick select");
+  }
+  const ctls = await phone.evaluate(() =>
+    [...document.querySelectorAll(".site-header .logo, .header-quick > *, .header-nav > .menu-btn")]
+      .map((e) => ({ e, r: e.getBoundingClientRect() }))
+      .filter(({ r }) => r.width > 0 && r.height > 0)
+      .map(({ e, r }) => ({ name: e.className || e.tagName, select: e.tagName === "SELECT", w: r.width, h: r.height })),
+  );
+  const spread = (xs) => Math.max(...xs) - Math.min(...xs);
+  const icons = ctls.filter((c) => !c.select);
+  const sizes = ctls.map((c) => `${c.name} ${c.w.toFixed(1)}x${c.h.toFixed(1)}`).join(", ");
+  if (spread(ctls.map((c) => c.h)) > 1) failures.push(`[header ${width}px] control heights differ: ${sizes}`);
+  if (spread(icons.map((c) => c.w)) > 1) failures.push(`[header ${width}px] icon button widths differ: ${sizes}`);
+  console.log(`  header ${width}px: ${sizes}`);
+}
+await phone.close();
 
 await browser.close();
 server.close();
