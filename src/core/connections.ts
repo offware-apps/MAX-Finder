@@ -21,8 +21,8 @@ export interface ConnectionOptions {
   /** Only keep journeys that include at least one night train (sleep aboard). */
   onlyNight?: boolean;
   /**
-   * reachableJourneys only: keep the EARLIEST-ARRIVING journey per destination
-   * (maximises time on site) instead of the shortest-duration one. Round-trip
+   * reachableJourneys / reachableInto only: keep the EARLIEST-ARRIVING journey per
+   * station (maximises time on site) instead of the shortest-duration one. Round-trip
    * "ideas" need this so their outbound matches bestGetawayTo's earliest-arrival
    * choice; one-way "best" leaves it off and keeps the fastest journey.
    */
@@ -142,17 +142,16 @@ export function catchableAfter<T extends { date: string; departMin: number }>(xs
   return xs.filter((x) => absoluteMinute(x.date, x.departMin) >= ready);
 }
 
+// One journey per chain of trains. A station group (LYON (intramuros)) can list one train at
+// two of its stations, so the shortest row wins: the earliest arrival, or the latest boarding.
 function dedupe(journeys: Journey[]): Journey[] {
-  const seen = new Set<string>();
-  const out: Journey[] = [];
+  const byKey = new Map<string, Journey>();
   for (const j of journeys) {
     const key = `${j.legs.map((l) => `${l.date}/${l.trainNo}@${l.origin}`).join(">")}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      out.push(j);
-    }
+    const cur = byKey.get(key);
+    if (!cur || j.totalDurationMin < cur.totalDurationMin) byKey.set(key, j);
   }
-  return out;
+  return [...byKey.values()];
 }
 
 /**
@@ -298,12 +297,15 @@ export function bestJourney(
  * per candidate when you want them all (e.g. the "ideas, all days" union). Same
  * connection rules as findJourneys: intermediate stops must be hubs, layovers
  * within the window, no station visited twice, first leg departs on `date`.
+ * With `arriveCeil` (minutes from `date` midnight) it keeps, per destination, the
+ * LATEST-departing journey arriving by then: the forward mirror of {@link latestReturns}.
  */
 export function reachableJourneys(
   trains: MaxTrain[],
   origin: string,
   date: string,
   opts: ConnectionOptions = {},
+  arriveCeil?: number,
 ): Map<string, Journey> {
   const maxConn = opts.maxConnections ?? 1;
   const hubSet = new Set(opts.hubs ?? HUB_STATIONS);
@@ -313,7 +315,7 @@ export function reachableJourneys(
   const maxC = span > 2 ? Math.max(baseMaxC, (span - 1) * 1440) : baseMaxC;
 
   const memo = reachMemo(trains);
-  const key = `${origin}@${date}|${maxConn}|${minC}-${maxC}|${span}|${opts.departAfter ?? ""}|${opts.departBefore ?? ""}|${opts.arriveBefore ?? ""}|${opts.maxDurationMin ?? ""}|${opts.minDurationMin ?? ""}|${opts.trainType ?? ""}|${opts.excludeNight ? "nonight" : ""}|${opts.onlyNight ? "onlynight" : ""}|${opts.earliestArrival ? "earlyarr" : ""}|${[...hubSet].join(",")}`;
+  const key = `${origin}@${date}|${maxConn}|${minC}-${maxC}|${span}|${opts.departAfter ?? ""}|${opts.departBefore ?? ""}|${opts.arriveBefore ?? ""}|${opts.maxDurationMin ?? ""}|${opts.minDurationMin ?? ""}|${opts.trainType ?? ""}|${opts.excludeNight ? "nonight" : ""}|${opts.onlyNight ? "onlynight" : ""}|${opts.earliestArrival ? "earlyarr" : ""}|${arriveCeil ?? ""}|${[...hubSet].join(",")}`;
   const cached = memo.get(key);
   if (cached) return cached;
 
@@ -358,19 +360,23 @@ export function reachableJourneys(
     // tour's min-per-train cap) don't get candidates the per-journey search rejects.
     const okDur = (maxDur == null || j.totalDurationMin <= maxDur) && (minDur == null || j.totalDurationMin >= minDur);
     // Latest acceptable arrival, on the absolute cross-date timeline.
-    const okArrive = arriveBy === undefined || journeyArriveAbs(j) <= arriveBy;
+    const okArrive =
+      (arriveBy === undefined || journeyArriveAbs(j) <= arriveBy) && (arriveCeil === undefined || journeyArriveAbs(j) <= arriveCeil);
     if (okNight && okDur && okArrive) {
       const cur = best.get(j.destination);
       // Default: keep the fastest. earliestArrival: keep the one arriving soonest in
       // ABSOLUTE time (ties → shorter), matching bestGetawayTo so round-trip ideas
       // stay at parity. Compare journeyArriveAbs, not the leg-local arriveMin — else a
       // via-hub journey whose last leg lands the next day would falsely look earliest.
+      // arriveCeil: keep the latest departure (ties → shorter), as latestReturns does.
       const better =
         !cur ||
-        (opts.earliestArrival
-          ? journeyArriveAbs(j) < journeyArriveAbs(cur) ||
-            (journeyArriveAbs(j) === journeyArriveAbs(cur) && j.totalDurationMin < cur.totalDurationMin)
-          : j.totalDurationMin < cur.totalDurationMin);
+        (arriveCeil !== undefined
+          ? j.departMin > cur.departMin || (j.departMin === cur.departMin && j.totalDurationMin < cur.totalDurationMin)
+          : opts.earliestArrival
+            ? journeyArriveAbs(j) < journeyArriveAbs(cur) ||
+              (journeyArriveAbs(j) === journeyArriveAbs(cur) && j.totalDurationMin < cur.totalDurationMin)
+            : j.totalDurationMin < cur.totalDurationMin);
       if (better) best.set(j.destination, j);
     }
     if (path.length - 1 >= maxConn) return; // used all allowed changes
@@ -533,7 +539,8 @@ function intoMemo(trains: MaxTrain[]): Map<string, Map<string, Journey>> {
  * multi-source sweep), so the "where can I come FROM" browse costs a single pass
  * instead of a per-origin search. Same connection rules (hub changes, layover window,
  * no station twice) as the forward search. Derived from {@link latestReturns} but
- * without the home-by ceiling and keeping the shortest journey, not the latest.
+ * without the home-by ceiling and keeping the shortest journey (or, with
+ * `earliestArrival`, the earliest-arriving one), not the latest.
  */
 export function reachableInto(
   trains: MaxTrain[],
@@ -549,7 +556,7 @@ export function reachableInto(
   const maxC = span > 2 ? Math.max(baseMaxC, (span - 1) * 1440) : baseMaxC;
 
   const memo = intoMemo(trains);
-  const key = `${target}@${date}|${maxConn}|${minC}-${maxC}|${span}|${opts.departAfter ?? ""}|${opts.departBefore ?? ""}|${opts.arriveBefore ?? ""}|${opts.maxDurationMin ?? ""}|${opts.trainType ?? ""}|${opts.excludeNight ? "nonight" : ""}|${opts.onlyNight ? "onlynight" : ""}|${[...hubSet].join(",")}`;
+  const key = `${target}@${date}|${maxConn}|${minC}-${maxC}|${span}|${opts.departAfter ?? ""}|${opts.departBefore ?? ""}|${opts.arriveBefore ?? ""}|${opts.maxDurationMin ?? ""}|${opts.trainType ?? ""}|${opts.excludeNight ? "nonight" : ""}|${opts.onlyNight ? "onlynight" : ""}|${opts.earliestArrival ? "earlyarr" : ""}|${[...hubSet].join(",")}`;
   const cached = memo.get(key);
   if (cached) return cached;
 
@@ -587,8 +594,15 @@ export function reachableInto(
     if (maxDur != null && j.totalDurationMin > maxDur) return;
     if (arriveBy !== undefined && journeyArriveAbs(j) > arriveBy) return;
     const cur = best.get(head.origin);
-    // Keep the shortest journey into the target (ties → earlier arrival).
-    if (!cur || j.totalDurationMin < cur.totalDurationMin) best.set(head.origin, j);
+    // Keep the shortest journey into the target, or with earliestArrival the one arriving
+    // soonest (ties → shorter), as reachableJourneys does.
+    const better =
+      !cur ||
+      (opts.earliestArrival
+        ? journeyArriveAbs(j) < journeyArriveAbs(cur) ||
+          (journeyArriveAbs(j) === journeyArriveAbs(cur) && j.totalDurationMin < cur.totalDurationMin)
+        : j.totalDurationMin < cur.totalDurationMin);
+    if (better) best.set(head.origin, j);
   };
 
   const dfs = (): void => {

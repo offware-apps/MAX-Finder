@@ -1,9 +1,9 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { marked } from "marked";
+import { SITE_URL as SITE, GITHUB_URL } from "../src/config.ts";
 
 const DIST = join(process.cwd(), "dist");
-const SITE = "https://davd-gzl.github.io/MAX-Finder/";
 const TOP_ROUTES = 150;
 
 if (!existsSync(join(DIST, "index.html"))) {
@@ -108,7 +108,7 @@ ${body}
           (Licence Ouverte), instantané du ${esc(lastmod)}. Disponibilités indicatives, rafraîchies ~1×/jour ;
           la réservation se fait sur <a href="https://www.sncf-connect.com/">SNCF Connect</a>.
           Projet libre et indépendant, non affilié à la SNCF —
-          <a href="https://github.com/davd-gzl/MAX-Finder">code source</a>.
+          <a href="${GITHUB_URL}">code source</a>.
         </p>
         <p>
           <a href="${SITE}">Rechercher un trajet</a> · <a href="${SITE}faq/">FAQ</a> ·
