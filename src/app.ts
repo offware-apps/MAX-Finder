@@ -154,7 +154,7 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: string }>;
 }
 let installPrompt: InstallPromptEvent | null = null;
-// Proposed/edited return date for the od "Do you want to come back?" section.
+// Proposed/edited return date for the round trip's return leg.
 // Reset on each fresh od search so a new outbound re-proposes (outbound + 2 days).
 let odReturnDate: string | null = null;
 // Set when an outbound-day change re-anchored a round-trip return: surfaces the
@@ -2672,29 +2672,6 @@ function runOdSearch(c: RenderCtx): void {
       );
   }
 
-  // "Do you want to come back?" — the come-back prompt belongs HERE, on the one-way page
-  // where adding a return is still an open decision (not on the round-trip page, where it's
-  // already decided). One tap switches "How long?" to a 1-night round trip and re-runs into
-  // the 2-leg accordion.
-  if (journeys.length > 0) {
-    refs.results.append(
-      el("div", { class: "od-comeback" }, [
-        el("button", {
-          class: "btn btn-ghost",
-          type: "button",
-          text: t("ret_title"),
-          on: {
-            click: () => {
-              formApi.setStayNights(1);
-              query = readQueryFromForm();
-              applyAndRun();
-            },
-          },
-        }),
-      ]),
-    );
-  }
-
   appendHiddenTrains(c);
   const nearbyIds = appendNearbyAlternatives(c, radiusAlt);
 
@@ -3241,10 +3218,10 @@ function runTripSearch(c: RenderCtx): void {
   fillReturns();
   setCollapsed(1, !retFlexible);
 
-  // "Do you want to come back?" landed here, but the proposed return day has no free-MAX
-  // return: the collapsed "Retour : … · Changer" summary would be a dead end (an empty list
-  // behind a closed calendar). Open the return leg AND its calendar by default so the days
-  // that DO have a return are visible straight away and one tap away — never a blank screen.
+  // The proposed return day has no free-MAX return: the collapsed "Retour : … · Changer"
+  // summary would be a dead end (an empty list behind a closed calendar). Open the return
+  // leg AND its calendar by default so the days that DO have a return are visible straight
+  // away and one tap away — never a blank screen.
   if (returnJourneys(odReturnDate ?? proposed).list.length === 0) {
     setCollapsed(1, false);
     retCalUI.setOpen(true);

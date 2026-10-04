@@ -154,7 +154,6 @@ export const zh: Dict = {
   link_newtab: "（新标签页）",
   rt_outbound: "去程",
   rt_inbound: "返程",
-  ret_title: "想要返程吗？",
   ret_none: "当天没有免费 MAX 返程。",
   keys_title: "键盘快捷键",
   keys_modes: "1–5：切换模式",

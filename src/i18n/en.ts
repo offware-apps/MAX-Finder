@@ -162,7 +162,6 @@ export const en: Dict = {
 
   rt_outbound: "Outbound",
   rt_inbound: "Return",
-  ret_title: "Do you want to come back?",
   ret_none: "No free-MAX return found on that day.",
   keys_title: "Keyboard shortcuts",
   keys_modes: "1–5: switch mode",

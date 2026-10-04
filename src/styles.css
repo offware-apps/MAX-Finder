@@ -1482,7 +1482,7 @@ a {
 .od-guide {
   margin: 0 0 0.3rem;
 }
-/* "Do you want to come back?" — turn a one-way result into a round trip in one tap. */
+/* A one-tap way forward under an empty list: a ghost button on its own centred row. */
 .od-comeback {
   display: flex;
   justify-content: center;
@@ -2744,7 +2744,7 @@ a {
   font-size: 1.02rem;
 }
 
-/* ---- od "come back?" return section ---- */
+/* ---- od round-trip return section ---- */
 .od-return {
   margin-top: 1rem;
   padding-top: 0.75rem;

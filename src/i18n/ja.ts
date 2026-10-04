@@ -154,7 +154,6 @@ export const ja: Dict = {
   link_newtab: "（新しいタブ）",
   rt_outbound: "往路",
   rt_inbound: "復路",
-  ret_title: "帰りますか？",
   ret_none: "その日の無料 MAX の帰り便はありません。",
   keys_title: "キーボードショートカット",
   keys_modes: "1–5: モード切替",

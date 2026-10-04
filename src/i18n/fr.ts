@@ -160,7 +160,6 @@ export const fr = {
 
   rt_outbound: "Aller",
   rt_inbound: "Retour",
-  ret_title: "Vous voulez rentrer ?",
   ret_none: "Aucun retour MAX gratuit ce jour-là.",
   keys_title: "Raccourcis clavier",
   keys_modes: "1–5 : changer de mode",

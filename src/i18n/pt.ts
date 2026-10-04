@@ -154,7 +154,6 @@ export const pt: Dict = {
   link_newtab: "(nova aba)",
   rt_outbound: "Ida",
   rt_inbound: "Volta",
-  ret_title: "Quer voltar?",
   ret_none: "Nenhuma volta MAX gratuita nesse dia.",
   keys_title: "Atalhos de teclado",
   keys_modes: "1–5: mudar de modo",

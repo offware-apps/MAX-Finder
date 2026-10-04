@@ -154,7 +154,6 @@ export const ar: Dict = {
   link_newtab: "(علامة تبويب جديدة)",
   rt_outbound: "ذهاب",
   rt_inbound: "إياب",
-  ret_title: "هل تريد العودة؟",
   ret_none: "لا توجد رحلة عودة MAX مجانية في ذلك اليوم.",
   keys_title: "اختصارات لوحة المفاتيح",
   keys_modes: "1–5: تبديل الوضع",
