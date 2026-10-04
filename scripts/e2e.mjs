@@ -557,6 +557,197 @@ await scenario(
   { viewport: { width: 390, height: 844, isMobile: true, hasTouch: true } },
 );
 
+const MOBILE = { width: 390, height: 844, isMobile: true, hasTouch: true };
+const urlParam = (page, key) => new URL(page.url()).searchParams.get(key);
+const fields = (page) => page.$$eval(".search-form .od-fields input", (els) => els.map((e) => e.value).join("|"));
+async function fillOd(page, from, to) {
+  await page.evaluate(
+    (vals) => {
+      const inputs = document.querySelectorAll(".search-form .od-fields input");
+      vals.forEach((v, i) => {
+        inputs[i].value = v;
+        inputs[i].dispatchEvent(new Event("input", { bubbles: true }));
+        inputs[i].dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    },
+    [from, to],
+  );
+}
+// The landing searches today, which the snapshot may carry no Paris → Lyon train for: pin
+// the form's date to RT_DATE, a day that has one, before a scenario searches from it.
+async function fillDate(page, date) {
+  await page.evaluate((d) => {
+    const input = document.querySelector(".search-form input.dp-native");
+    input.value = d;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, date);
+}
+const clickSearch = (page) => page.click(".search-form .form-actions button.btn-primary");
+
+// 16. Regression: each history entry restores its OWN form and tab. Search Paris → Lyon from
+//     the landing, open Ideas, Back twice: the landing comes back on the Trip tab with Paris →
+//     Lyon filled (not the Ideas form built after it), and its bare URL shows no results.
+await scenario(
+  "history: Back to the landing restores its own form and tab, with no results under it",
+  BASE,
+  async (page) => {
+    await fillOd(page, P, L);
+    await fillDate(page, RT_DATE);
+    await clickSearch(page);
+    assert(await until(async () => (await $count(page, "article.journey")) > 0), "precondition: no Paris → Lyon results");
+    await page.click('.mode-tab[data-trip="ideas"]');
+    assert(await until(async () => urlParam(page, "mode") === "best"), "precondition: Ideas did not open");
+    await page.goBack();
+    await page.goBack();
+    assert(await until(async () => !new URL(page.url()).search), `two Backs did not reach the landing (${page.url()})`);
+    const landed = await until(async () =>
+      (await activeTrip(page)) === "simple" && (await $count(page, ".results .empty")) > 0 ? true : null,
+    );
+    assert(landed, `landing shows tab "${await activeTrip(page)}", results "${(await $text(page, ".results"))?.slice(0, 60)}"`);
+    const filled = await fields(page);
+    assert(/paris/i.test(filled) && /lyon/i.test(filled), `landing form is not its own (got "${filled}")`);
+    const rows = await $count(page, ".results .group-card, .results article.journey");
+    assert(rows === 0, `the bare landing URL shows ${rows} result rows`);
+  },
+);
+
+// 17. Regression: the tab follows the entry, not the last form. Legs link → Ideas (no origin)
+//     → Multi-city → Back must land on the Ideas tab its URL names, without the legs results.
+await scenario(
+  "history: Back to an Ideas entry shows the Ideas tab, not the Multi-city built after it",
+  `${BASE}?mode=tour&legs=${enc(`${P}>${L}@${DATE}`)}&date=${DATE}`,
+  async (page) => {
+    assert(await until(async () => (await $count(page, ".mc-result")) > 0), "precondition: legs did not render");
+    await page.click('.mode-tab[data-trip="ideas"]');
+    assert(await until(async () => urlParam(page, "mode") === "best"), "precondition: Ideas did not open");
+    await page.click('.mode-tab[data-trip="multi"]');
+    assert(await until(async () => urlParam(page, "mode") === "tour"), "precondition: Multi-city did not open");
+    await page.goBack();
+    const back = await until(async () =>
+      urlParam(page, "mode") === "best" && (await activeTrip(page)) === "ideas" && (await $count(page, ".mc-result")) === 0,
+    );
+    assert(back, `Back to ?mode=best shows tab "${await activeTrip(page)}" with ${await $count(page, ".mc-result")} legs`);
+  },
+);
+
+// 18. Regression: the saved-trips page is its own history entry. See all → Back → Forward
+//     must land on the saved page again, not on the list under it.
+await scenario(
+  "history: Forward returns to the saved-trips page",
+  `${BASE}?mode=od&from=${enc(P)}&to=${enc(L)}&date=${RT_DATE}`,
+  async (page) => {
+    assert(await until(async () => (await $count(page, "article.journey button[aria-pressed]")) > 0), "precondition: no train to save");
+    await page.click("article.journey button[aria-pressed]");
+    await page.click(".saved-see-all");
+    assert(await until(async () => (await $count(page, ".saved-page-card")) > 0), "the saved-trips page did not open");
+    await page.goBack();
+    assert(await until(async () => (await $count(page, "article.journey")) > 0), "Back did not return to the list");
+    await page.goForward();
+    assert(
+      await until(async () => (await $count(page, ".saved-page-card")) > 0 && (await $count(page, "article.journey")) === 0),
+      `Forward shows "${await $text(page, "#results-title")}" instead of the saved-trips page`,
+    );
+  },
+);
+
+// 19. Regression: a dialog owns one history entry. At 390px, Back with a dialog open closes
+//     it and stays on the results; a dialog closed by its own button leaves no stray entry,
+//     so the next Back reaches the form.
+await scenario(
+  "history: Back closes an open dialog first; a dialog closed by its button leaves no entry",
+  BASE,
+  async (page) => {
+    await fillOd(page, P, L);
+    await fillDate(page, RT_DATE);
+    await clickSearch(page);
+    assert(await until(async () => (await $count(page, "article.journey")) > 0), "precondition: no Paris → Lyon results");
+    const openDialog = async () => {
+      await page.keyboard.press("?");
+      assert(await until(async () => (await $count(page, "dialog[open]")) === 1), "the help dialog did not open");
+    };
+    await openDialog();
+    await page.goBack();
+    assert(await until(async () => (await $count(page, "dialog[open]")) === 0), "Back left the dialog open");
+    assert(urlParam(page, "from"), "Back with a dialog open left the results page");
+    assert((await $count(page, "article.journey")) > 0, "Back with a dialog open re-rendered the page empty");
+    await openDialog();
+    await page.click("dialog[open] .modal-close");
+    assert(await until(async () => (await $count(page, "dialog[open]")) === 0), "the Close button did not close the dialog");
+    await page.goBack();
+    assert(await until(async () => !urlParam(page, "from")), `one Back after closing did not reach the form (${page.url()})`);
+  },
+  { viewport: MOBILE },
+);
+
+// 20. Regression: Back from a drilled-in route puts the list back where it was scrolled, in
+//     the drawer at 390px and in the main column at 1366px.
+for (const [viewport, label] of [[MOBILE, "390px drawer"], [undefined, "1366px column"]]) {
+  await scenario(
+    `history: Back from a route restores the list's scroll (${label})`,
+    `${BASE}?mode=from&from=${enc(P)}&date=${DATE}`,
+    async (page) => {
+      assert(await until(async () => (await $count(page, ".results .group-card")) > 30), "precondition: short list");
+      const scrollTop = () =>
+        page.evaluate(() => {
+          const el = [".drawer-scroll", ".main-col"]
+            .map((s) => document.querySelector(s))
+            .find((e) => e && /auto|scroll/.test(getComputedStyle(e).overflowY));
+          return (el ?? document.scrollingElement).scrollTop;
+        });
+      await page.evaluate(() => document.querySelectorAll(".results .group-card")[25].scrollIntoView());
+      const before = await scrollTop();
+      assert(before > 500, `precondition: the list did not scroll (${before}px)`);
+      await page.evaluate(() => {
+        const card = document.querySelectorAll(".results .group-card")[25];
+        (card.querySelector(".dest-main") || card).click();
+      });
+      assert(await until(async () => (await $count(page, ".back-btn")) > 0), "the route did not open");
+      await page.goBack();
+      const restored = await until(async () => Math.abs((await scrollTop()) - before) <= 2);
+      assert(restored, `Back put the list at ${await scrollTop()}px, it was at ${before}px`);
+    },
+    viewport && { viewport },
+  );
+}
+
+// 21. Regression: "See all dates" in the trip dialog shows the dates in place — both
+//     calendars open, same page — instead of re-running the route as a new detail page.
+await scenario(
+  "trip dialog: 'See all dates' opens the calendars in place, with no new page",
+  `${BASE}?mode=od&from=${enc(P)}&to=${enc(L)}&date=${RT_DATE}&rdate=${RT_DATE2}`,
+  async (page) => {
+    assert(await until(async () => page.$eval(".rt-view-ticket", (b) => !b.hidden).catch(() => false)), "precondition: no ticket");
+    const url = page.url();
+    await page.click(".rt-view-ticket");
+    assert(await until(async () => (await $count(page, "dialog[open] .trip-more")) === 1), "the trip dialog did not open");
+    await page.click("dialog[open] .trip-more");
+    const opened = await until(async () =>
+      (await $count(page, "dialog[open]")) === 0 && (await $count(page, '.results .cal-toggle[aria-expanded="true"]')) >= 2,
+    );
+    assert(opened, `calendars open: ${await $count(page, '.results .cal-toggle[aria-expanded="true"]')} of 2`);
+    assert(page.url() === url, `the URL changed to ${page.url()}`);
+    assert((await $count(page, ".back-btn")) === 0, "'See all dates' opened a new detail page");
+  },
+);
+
+// 22. Regression: the tab shortcuts keep working after one lands on an empty tab. Landing
+//     on the empty Trip tab must not pull focus into its field, where "3" would be typed.
+await scenario(
+  "keyboard: 1/2/3 keep switching tabs after landing on an empty one",
+  `${BASE}?mode=tour&date=${DATE}`,
+  async (page) => {
+    await page.keyboard.press("1");
+    const settled = await until(async () => (await activeTrip(page)) === "simple" && (await $count(page, ".results .loading")) === 0);
+    assert(settled, "'1' did not open the Trip tab");
+    await page.keyboard.press("3");
+    const ideas = await until(async () => (await activeTrip(page)) === "ideas");
+    assert(ideas, `'3' did not open Ideas; the fields read "${await fields(page)}"`);
+    await page.keyboard.press("?");
+    assert(await until(async () => (await $count(page, "dialog[open]")) === 1), "'?' did not open the shortcuts help");
+  },
+);
+
 // 12. PWA manifest is served and parseable, icon reference resolves.
 await scenario("pwa: manifest is served and valid JSON", BASE, async (page) => {
   const manifestHref = await page.$eval('link[rel="manifest"]', (el) => el.getAttribute("href"));

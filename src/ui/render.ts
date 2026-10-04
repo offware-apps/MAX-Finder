@@ -42,8 +42,6 @@ export interface RenderCtx {
   isTripSaved: (outbound: Journey, inbound?: Journey) => boolean;
   /** Save the trip if absent, else remove it. */
   onToggleTrip: (outbound: Journey, inbound?: Journey) => void;
-  /** Open the consolidated one-page view of a trip (round trip when `inbound` is set). */
-  onShowTrip: (outbound: Journey, inbound?: Journey) => void;
   /** Whether this multi-city tour is saved. */
   isTourSaved: (tour: Tour) => boolean;
   /** Save the tour if absent, else remove it. */
@@ -502,7 +500,7 @@ export function reachTripRowEl(
   j: Journey,
   ctx: RenderCtx,
   extra?: HTMLElement,
-  opts?: { hideMeta?: boolean; hideVia?: boolean },
+  opts?: { hideVia?: boolean; openDate?: string },
 ): HTMLElement {
   const route: RoutePair = { origin: j.origin, destination: j.destination };
   const via = j.legs.length > 1;
@@ -525,7 +523,7 @@ export function reachTripRowEl(
   const metaChips: HTMLElement[] = [
     ...viaChip,
     ...(extra ? [extra] : []),
-    ...(opts?.hideMeta ? [] : [el("bdi", { text: formatDuration(j.totalDurationMin) })]),
+    el("bdi", { text: formatDuration(j.totalDurationMin) }),
   ];
   const main = el(
     "button",
@@ -533,12 +531,12 @@ export function reachTripRowEl(
       class: "dest-main dest-main-stacked",
       type: "button",
       attrs: { "aria-label": aria },
-      on: { click: () => ctx.onOpenRoute(j.origin, j.destination) },
+      on: { click: () => ctx.onOpenRoute(j.origin, j.destination, opts?.openDate ? { date: opts.openDate } : undefined) },
     },
     [
       el("div", { class: "dest-body" }, [
         stationNameEl("dest-name", station, ctx.label(station)),
-        ...(metaChips.length ? [el("span", { class: "dest-meta", attrs: { "aria-hidden": "true" } }, metaChips)] : []),
+        el("span", { class: "dest-meta", attrs: { "aria-hidden": "true" } }, metaChips),
       ]),
       el("span", { class: "chev", attrs: { "aria-hidden": "true" } }, [icon(I.arrow)]),
     ],
@@ -726,15 +724,11 @@ export function listToolbarEl(
 }
 
 /**
- * A ranked best-trip row ("best" mode). Shows the month-long train count for the
- * destination (like the "Where to?" list) plus, in the all-days view, how many
- * days it's reachable.
+ * A ranked best-trip row ("best" mode): the changes it takes, the month-long train count,
+ * the fastest travel time, and the figure the active `sort` ranks by when it is another
+ * one (days reachable, distance). Opens on the first day the destination is reachable.
  */
-export function bestTripRowEl(trip: BestTrip, ctx: RenderCtx, trains?: number): HTMLElement {
-  // Ideas is a discovery list: the city name is the point, so it always leads. A single
-  // "N trains" chip (the ranking signal — how well-served the route is across the month)
-  // rides alongside it; the duration meta is dropped so a long city name never gets
-  // squeezed out of the row. Both figures still live in the chip's tooltip.
+export function bestTripRowEl(trip: BestTrip, ctx: RenderCtx, trains?: number, sort?: SortKey): HTMLElement {
   const chips: HTMLElement[] = [];
   // How many changes it takes to get there — the point of the Ideas list: Direct, or
   // "N correspondance(s)". Colour-matched to the map pins (green direct / amber 1 / red 2+).
@@ -753,16 +747,19 @@ export function bestTripRowEl(trip: BestTrip, ctx: RenderCtx, trains?: number): 
       }),
     );
   }
+  if (sort === "days" && trip.days) chips.push(el("span", { class: "stat-chip", text: t("badge_days", { n: trip.days }) }));
+  const km = sort === "closest" ? ctx.distanceKm(trip.journey.origin, trip.destination) : Infinity;
+  if (Number.isFinite(km)) chips.push(el("span", { class: "stat-chip", text: t("nearby_km", { km: Math.round(km) }) }));
   const extra = el("span", { class: "row-chips" }, chips);
-  return reachTripRowEl(trip.destination, trip.journey, ctx, extra, { hideMeta: true, hideVia: true });
+  return reachTripRowEl(trip.destination, trip.journey, ctx, extra, { hideVia: true, openDate: trip.firstDate });
 }
 
 /**
- * A nearby paid-connection alternative (radius search): the nearby station, how
- * far it is, and the free-MAX journey it offers. Clicking opens that free route;
- * the user covers the short hop to/from the exact endpoint themselves.
+ * A nearby paid-connection alternative (radius search): the station, a `note` naming the
+ * nearby station and its distance, and the free-MAX journey it offers. Clicking opens that
+ * free route; the user covers the short hop to/from the exact endpoint themselves.
  */
-export function nearbyTripRowEl(station: string, km: number, j: Journey, ctx: RenderCtx): HTMLElement {
+export function nearbyTripRowEl(station: string, note: string, j: Journey, ctx: RenderCtx): HTMLElement {
   const via = j.legs.length > 1;
   const viaChip = via
     ? [el("span", { class: "chip chip-via", text: t("lbl_via", { hub: j.hubs.map((h) => ctx.label(h)).join(", ") }) })]
@@ -770,17 +767,19 @@ export function nearbyTripRowEl(station: string, km: number, j: Journey, ctx: Re
   const main = el(
     "button",
     {
-      class: "dest-main",
+      class: "dest-main dest-main-stacked",
       type: "button",
-      attrs: { "aria-label": `${ctx.label(station)} — ${t("nearby_km", { km })} — ${formatDuration(j.totalDurationMin)}` },
+      attrs: { "aria-label": `${ctx.label(station)} — ${note} — ${formatDuration(j.totalDurationMin)}` },
       on: { click: () => ctx.onOpenRoute(j.origin, j.destination) },
     },
     [
-      stationNameEl("dest-name", station, ctx.label(station)),
-      el("span", { class: "chip chip-soft km-chip", text: t("nearby_km", { km }) }),
-      ...viaChip,
-      el("span", { class: "dest-meta", attrs: { "aria-hidden": "true" } }, [
-        el("bdi", { text: formatDuration(j.totalDurationMin) }),
+      el("div", { class: "dest-body" }, [
+        stationNameEl("dest-name", station, ctx.label(station)),
+        el("span", { class: "dest-meta", attrs: { "aria-hidden": "true" } }, [
+          el("span", { class: "chip chip-soft km-chip", text: note }),
+          ...viaChip,
+          el("bdi", { text: formatDuration(j.totalDurationMin) }),
+        ]),
       ]),
       el("span", { class: "chev", attrs: { "aria-hidden": "true" } }, [icon(I.arrow)]),
     ],
@@ -806,20 +805,22 @@ export function nearbyBothRowEl(
   const main = el(
     "button",
     {
-      class: "dest-main",
+      class: "dest-main dest-main-stacked",
       type: "button",
       attrs: { "aria-label": `${ctx.label(fromId)} → ${ctx.label(toId)} — ${formatDuration(j.totalDurationMin)}` },
       on: { click: () => ctx.onOpenRoute(j.origin, j.destination) },
     },
     [
-      el("span", { class: "dest-name" }, [
-        el("bdi", { text: ctx.label(fromId) }),
-        el("span", { class: "muted", text: " → " }),
-        el("bdi", { text: ctx.label(toId) }),
-      ]),
-      el("span", { class: "chip chip-soft km-chip", text: t("nearby_km", { km: Math.max(fromKm, toKm) }) }),
-      el("span", { class: "dest-meta", attrs: { "aria-hidden": "true" } }, [
-        el("bdi", { text: formatDuration(j.totalDurationMin) }),
+      el("div", { class: "dest-body" }, [
+        el("span", { class: "dest-name" }, [
+          el("bdi", { text: ctx.label(fromId) }),
+          el("span", { class: "muted", text: " → " }),
+          el("bdi", { text: ctx.label(toId) }),
+        ]),
+        el("span", { class: "dest-meta", attrs: { "aria-hidden": "true" } }, [
+          el("span", { class: "chip chip-soft km-chip", text: t("nearby_km", { km: Math.max(fromKm, toKm) }) }),
+          el("bdi", { text: formatDuration(j.totalDurationMin) }),
+        ]),
       ]),
       el("span", { class: "chev", attrs: { "aria-hidden": "true" } }, [icon(I.arrow)]),
     ],

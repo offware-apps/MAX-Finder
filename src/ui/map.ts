@@ -201,7 +201,10 @@ export class RouteMap {
     }
     const drawer = document.querySelector<HTMLElement>(".results-drawer");
     const bottom = Math.round((drawer?.clientHeight ?? window.innerHeight * 0.3) + 12);
-    map.fitBounds(bounds, { paddingTopLeft: [24, 76], paddingBottomRight: [24, bottom] });
+    // The bar wraps to two lines on a long route, so reserve its measured height.
+    const bar = document.querySelector<HTMLElement>(".msearch-bar");
+    const top = bar ? bar.offsetTop + bar.offsetHeight + 17 : 76;
+    map.fitBounds(bounds, { paddingTopLeft: [24, top], paddingBottomRight: [24, bottom] });
   }
 
   /** Render a hub station linked to each of `others`. Unknown coords are skipped. */

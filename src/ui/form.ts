@@ -1163,8 +1163,10 @@ export function createForm(props: FormProps): FormHandle {
   };
   // "Minimum time there" only means something for a SAME-DAY round trip (a fixed 0-night
   // return), on the single-trip tab — a stay with nights or a one-way has no on-site gate.
+  // Flexible leaves it in place but inert, as it does the stepper, so the form never shifts.
   const syncStayMinField = (): void => {
-    stayMinField.style.display = currentTrip === "simple" && roundTrip && !flexible && nights === 0 ? "" : "none";
+    stayMinField.style.display = currentTrip === "simple" && roundTrip && nights === 0 ? "" : "none";
+    stayMin.disabled = flexible;
   };
   /** The current shape as a TripShape: one-way, Flexible (return picked on the calendar),
    *  or the fixed stay the nights imply. */
@@ -1645,7 +1647,8 @@ export function createForm(props: FormProps): FormHandle {
     setFlexible: (n) => {
       roundTrip = true;
       flexible = true;
-      if (n != null) nights = Math.max(0, Math.min(NIGHTS_MAX, n));
+      // The inert stepper reads the picked range, which may run past the stepper's own max.
+      if (n != null) nights = Math.max(0, n);
       syncTripShape();
     },
     toggleRound: () => {
