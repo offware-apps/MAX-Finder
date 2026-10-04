@@ -1277,8 +1277,8 @@ function scrollListTo(top: number): void {
  * Gently reveal an element that sits BELOW the current fold — and only then. A calendar
  * tap must never jerk the page/drawer UP (David: "clicking a date scrolls up, why?"), so
  * this is a one-way scroll: if the target is already visible or above the fold, it does
- * nothing. Used to surface genuinely-new content (the return leg the first time it opens,
- * a discovery list narrowed below the fold), never to re-anchor on every tap.
+ * nothing. Used to surface genuinely-new content, the return leg the first time it opens,
+ * never to re-anchor on every tap.
  */
 function revealElement(target: HTMLElement | null): void {
   if (!target) return;
@@ -1292,13 +1292,7 @@ function revealElement(target: HTMLElement | null): void {
   target.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 
-/** Bring the updated results into view after a filter change, so a tap that re-renders
- *  the list below the fold visibly does something — but only ever scrolling DOWN. */
-function revealResults(): void {
-  revealElement(refs.results.querySelector<HTMLElement>(".count") ?? (refs.results.firstElementChild as HTMLElement | null));
-}
-
-function refreshInPlace(reveal = false): void {
+function refreshInPlace(): void {
   // Restamp the entry with a FRESH form snapshot (not just the URL): an in-place refine —
   // completing a Flexible range, moving the return — changes the form, and a Back must
   // restore that latest form, not the snapshot frozen before the refine. The entry keeps
@@ -1326,11 +1320,7 @@ function refreshInPlace(reveal = false): void {
   formApi.refreshTourEndDate();
   clear(refs.results);
   renderSearch();
-  if (reveal) {
-    // A discovery filter (a day / window-chip tap) re-rendered the list below the fold —
-    // scroll it into view rather than restoring the old position, so the tap is visible.
-    revealResults();
-  } else if (scroller) {
+  if (scroller) {
     scroller.scrollTop = scrollY;
   } else {
     window.scrollTo({ top: scrollY });
@@ -1561,7 +1551,7 @@ function commitFormPick(): void {
   // day, the calendar selection doesn't update the map"). Only a truly empty query stays
   // staged.
   if (queryIsRenderable(query)) {
-    if (sameRoute) refreshInPlace(true);
+    if (sameRoute) refreshInPlace();
     else applyAndRun();
   }
   repaintFormCalendar();

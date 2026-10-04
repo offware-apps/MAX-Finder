@@ -220,13 +220,14 @@ describe("round-trip discovery", () => {
     expect(root.querySelector('.results .group-card[data-station="LYON (intramuros)"]')).not.toBeNull();
   });
 
-  it("a day tapped on the form calendar brings the refreshed list into view", () => {
+  it("a day tapped on the form calendar refreshes the list without scrolling to it", () => {
     const root = setup(`?mode=from&from=GAP&date=2026-06-25&stay=day`, trains);
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({ top: 5000, bottom: 5040 } as DOMRect);
     const scrolled = vi.spyOn(Element.prototype, "scrollIntoView");
     root.querySelector<HTMLButtonElement>('.form-cal-mount .cal-cell[data-date="2026-06-27"]')!.click();
     flush();
-    expect(scrolled).toHaveBeenCalled();
+    expect(root.querySelector('.results .group-card[data-station="LYON (intramuros)"]')).not.toBeNull();
+    expect(scrolled).not.toHaveBeenCalled();
   });
 });
 
