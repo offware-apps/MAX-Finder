@@ -6,18 +6,76 @@ import * as render from "./render";
 import { t } from "../i18n";
 import { APP_VERSION, APP_BUILD } from "../config";
 
+/* ── history ── */
+
+// An open modal owns one history entry, the page's own state plus `dialog`, so the
+// browser Back closes the modal instead of leaving the page under it.
+let modalBase = ""; // the URL of the page under the modal
+let popping = false; // the modal's own entry is being popped
+let afterPop: (() => void) | null = null;
+
+function isModalEntry(state: unknown): boolean {
+  return Boolean(state && typeof state === "object" && (state as { dialog?: unknown }).dialog);
+}
+
+function runAfterPop(): void {
+  const fn = afterPop;
+  afterPop = null;
+  fn?.();
+}
+
+/** Once the last open modal has closed, pop its entry, then run `afterPop`. */
+function releaseEntry(): void {
+  if (document.querySelector("dialog[open]")) return; // a modal reopened over it keeps the entry
+  if (isModalEntry(history.state)) {
+    popping = true;
+    history.back();
+  } else {
+    runAfterPop();
+  }
+}
+
+/**
+ * Handle a popstate that belongs to a modal; true means the page under it stays as it is.
+ * Back closes an open modal, and Forward onto the entry of a closed one steps off it.
+ * @param state the popstate event's state.
+ */
+export function modalPopstate(state: unknown): boolean {
+  if (popping) {
+    popping = false;
+    runAfterPop();
+    return true;
+  }
+  const open = document.querySelectorAll<HTMLDialogElement>("dialog[open]");
+  if (open.length > 0) {
+    for (const d of open) d.close();
+    return location.href === modalBase;
+  }
+  if (!isModalEntry(state)) return false;
+  popping = true;
+  history.back();
+  return true;
+}
+
 /* ── internal helpers ── */
 
 /**
  * Wire the shared dialog lifecycle: remove from the DOM once closed, close on a
- * backdrop click, then mount and open it.
+ * backdrop click, give it a history entry, then mount and open it.
  * @param dialog the dialog element to mount and open.
  */
 function mountModal(dialog: HTMLDialogElement): void {
-  dialog.addEventListener("close", () => dialog.remove());
+  dialog.addEventListener("close", () => {
+    dialog.remove();
+    releaseEntry();
+  });
   dialog.addEventListener("click", (e) => {
     if (e.target === dialog) dialog.close();
   });
+  if (!isModalEntry(history.state)) {
+    modalBase = location.href;
+    history.pushState({ ...history.state, dialog: true }, "");
+  }
   document.body.append(dialog);
   dialog.showModal();
 }
@@ -191,16 +249,17 @@ export function showBookingModal(journey: Journey, ctx: RenderCtx): void {
 
 /**
  * The whole trip on one page: a single journey or a round trip, with both legs
- * bookable, a share action, and a shortcut to the route's full calendar. Map
- * actions are neutralised — there's no map behind the dialog to draw on.
+ * bookable, a share action, and a shortcut to the route's dates. Map actions are
+ * neutralised — there's no map behind the dialog to draw on.
  * @param outbound the outbound journey.
  * @param ctx render context for the trip card.
- * @param opts optional inbound leg and a share handler.
+ * @param opts optional inbound leg, a share handler, and what "See all dates" does once
+ * the dialog and its history entry are gone.
  */
 export function showTripModal(
   outbound: Journey,
   ctx: RenderCtx,
-  opts: { inbound?: Journey; onShare?: (onCopied: () => void) => void } = {},
+  opts: { inbound?: Journey; onShare?: (onCopied: () => void) => void; onMoreDates: () => void },
 ): void {
   const { inbound, onShare } = opts;
   const dialog = el("dialog", { class: "modal trip-modal" }) as HTMLDialogElement;
@@ -210,8 +269,8 @@ export function showTripModal(
     text: t("trip_more_dates"),
     on: {
       click: () => {
+        afterPop = opts.onMoreDates;
         dialog.close();
-        ctx.onOpenRoute(outbound.origin, outbound.destination);
       },
     },
   });

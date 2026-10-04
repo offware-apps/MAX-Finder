@@ -42,8 +42,6 @@ export interface RenderCtx {
   isTripSaved: (outbound: Journey, inbound?: Journey) => boolean;
   /** Save the trip if absent, else remove it. */
   onToggleTrip: (outbound: Journey, inbound?: Journey) => void;
-  /** Open the consolidated one-page view of a trip (round trip when `inbound` is set). */
-  onShowTrip: (outbound: Journey, inbound?: Journey) => void;
   /** Whether this multi-city tour is saved. */
   isTourSaved: (tour: Tour) => boolean;
   /** Save the tour if absent, else remove it. */

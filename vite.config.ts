@@ -22,6 +22,8 @@ export default defineConfig(({ command, mode }) => ({
   build: {
     target: "es2022",
     sourcemap: true,
+    // Fonts always ship as files: the page CSP (font-src falls back to 'self') blocks data: fonts.
+    assetsInlineLimit: (file: string) => (/\.woff2?$/.test(file) ? false : undefined),
   },
   test: {
     environment: "jsdom",

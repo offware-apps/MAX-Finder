@@ -23,6 +23,9 @@ export const LOGO_SVG =
 export const GITHUB_SVG =
   '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.3a10.7 10.7 0 0 0-3.38 20.86c.53.1.73-.23.73-.51 0-.25-.01-.92-.01-1.8-2.98.65-3.6-1.44-3.6-1.44-.49-1.24-1.19-1.57-1.19-1.57-.97-.66.08-.65.08-.65 1.07.08 1.64 1.1 1.64 1.1.95 1.64 2.5 1.16 3.11.89.1-.69.37-1.16.68-1.43-2.38-.27-4.88-1.19-4.88-5.3 0-1.17.42-2.13 1.1-2.88-.11-.27-.48-1.36.1-2.84 0 0 .9-.29 2.95 1.1a10.2 10.2 0 0 1 5.36 0c2.05-1.39 2.95-1.1 2.95-1.1.58 1.48.21 2.57.1 2.84.69.75 1.1 1.71 1.1 2.88 0 4.12-2.5 5.02-4.89 5.29.38.33.72.98.72 1.98 0 1.43-.01 2.58-.01 2.93 0 .28.19.62.74.51A10.7 10.7 0 0 0 12 1.3Z"/></svg>';
 
+export const BOOKMARK_SVG =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>';
+
 export const SEARCH_SVG =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>';
 

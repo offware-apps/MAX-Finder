@@ -34,7 +34,9 @@ round trip out of fixed-nights mode so you pick the **exact departure and return
 Trip-tab calendar** (Ulysse-style). While Flexible is active the fixed-nights stepper stays
 **in place but inert (dimmed, buttons disabled)** rather than being removed — so toggling
 Flexible never moves the "Durée sur place" label or reflows the row (no layout jump); only
-the pill lights up. The form's stay becomes `flexible`. Tapping the stepper or a segment leaves
+the pill lights up. The inert stepper reads the nights of the range on screen, and the
+same-day "Temps minimum sur place" field likewise stays in place, inert. Switching to
+Flexible keeps the current stay as the range. The form's stay becomes `flexible`. Tapping the stepper or a segment leaves
 Flexible again. The stepper (and the pill) are hidden for one-way. `r` toggles one-way ↔
 round trip (keeping the nights count, never Flexible); `1/2/3` switch tabs. Toggling,
 stepping, or picking Flexible re-runs in place (no second Search tap when origin +
@@ -47,8 +49,10 @@ return date on `query.returnDate` (URL `stay=flex` + `rdate`).
 The **Trip tab's date picker is a live availability calendar on the form itself**
 (`repaintFormCalendar` in `src/app.ts`, painted into `refs.formCalendar` via
 `render.calendarEl`). It sits under the date + trip-shape row behind a one-tap
-**"When to leave?"** header (which also shows the picked departure) and is **collapsed by
-default** so the form stays short on a phone — one tap opens the month to change the day.
+**"When to leave?"** header (which also shows the picked departure, on its own line so the
+header keeps one height in every trip shape) and is **collapsed by default** so the form
+stays short on a phone — one tap opens the month to change the day. A day picked under the
+results (either leg's calendar) moves it too.
 The header names the calendar once (the in-body `<h3>` is rendered `sr-only` via
 `calendarEl`'s `hideTitle`, so "When to leave?" isn't written twice). It **recomputes whenever
 anything it is derived from changes** — origin, destination, the Aller simple / Aller-retour
@@ -73,8 +77,8 @@ the post-reload "press Search" prompt.
 |-------|------------------|-------------|
 | no origin yet | — (neutral month) | any day, tappable — with a "pick a departure station" hint |
 | origin + dest, one-way | `availabilityCalendar` | a departure exists that day (count = trains) |
-| origin + dest, same day (0 nights) | `stayCalendar` (hours) | a same-day there-and-back works (count = hours on site) |
-| origin + dest, N nights | `stayCalendar` (nights) | an N-night round trip is feasible (count = nights) |
+| origin + dest, same day (0 nights) | `stayCalendar` (hours) | a same-day there-and-back works (count = whole hours on site, rounded down) |
+| origin + dest, N nights | `stayCalendar` (nights) | a return exactly N nights later exists (count = N) |
 | origin only, one-way | `reachableCountCalendar` | you can leave that day (count = destinations) |
 | origin only, round / same day | `getawayIdeas().perDay` | a getaway is possible that day (count = destinations) |
 
@@ -89,13 +93,18 @@ stays as the exact-date / ±flex keyboard entry for power users.
 departure** and arms the calendar for the return (`formRangeAwait`); the **next tap on/after
 it sets the return** — `query.returnDate` with `stay: "flexible"` — and (route complete) runs
 the flexible round trip in place, while an earlier tap just restarts. A **third tap begins a
-fresh range**. The days between the two picked endpoints (both `.sel`) get a `.range` band,
-and while the return is being chosen hovering previews the pending span (`.preview`).
-Availability is shown exactly as the single-date calendar (round-trip feasibility). The
+fresh range**. The first tap stays on the form: the header reads the departure as pending
+("choose the return") while the URL and the results keep the range already on screen, and
+the return tap runs the new range. A link with no `rdate` shows the departure + 2 its
+results propose, in the header and the range too. The days between the two endpoints (both
+`.sel`) get a `.range` band, and while the return is being chosen hovering previews the
+pending span (`.preview`). The days count outbound trains, and while the return is awaited
+they count return trains, the days before the departure greyed (a tap there restarts). The
 collapsed header spells out the two endpoints ("Aller: … → Retour: …", or a "choose the
-return" prompt); `syncFormFromQuery` restores the highlighted range from `stay=flex` +
-`rdate`. Fixed-nights and one-way modes keep the single-date departure picker; only Flexible
-turns on range selection. The results-page return calendar still handles the return too —
+return" prompt while the return is awaited and in discovery, which proposes no return);
+`syncFormFromQuery` restores the highlighted range from `stay=flex` + `rdate`. Fixed-nights
+and one-way modes keep the single-date departure picker; only Flexible turns on range
+selection. The results-page return calendar still handles the return too —
 this only adds the pick on the **first page**.
 
 **Max correspondances** (0 / 1 / 2 / 3 / no limit) is a **main-form field**, not buried in
@@ -125,6 +134,8 @@ span applied to the lists only, and a day could read green while its list was em
    - **Leg 2 Return** opens (gently revealed only if below the fold — a calendar tap never
      scrolls the drawer up) — a return calendar whose **first cell is the same day** (hours
      on site), later cells are nights at the destination, pre-selected to the stay's return.
+     A stay's list is fastest first, and a stay from the last bookable day keeps its return
+     past the window, where the return leg says there is none.
      For a **fixed** N-night stay the return is derived with no second question, so its
      calendar is **collapsed by default** behind a "Return: <date> · Change" toggle (same
      `.cal-collapsible` / `.cal-toggle` / `.cal-panel` pattern as the outbound one). In
@@ -138,8 +149,9 @@ span applied to the lists only, and a day could read green while its list was em
    - **Trip modal** = booking recap: each leg's own **travel date** rides on the ticket header
      (beside "Outbound" / "Return"), and an unmistakable per-leg action — "Book the outbound" /
      "Book the return" (each deep-links SNCF Connect; a connecting leg opens the step modal)
-     — plus Save the whole trip. Back inside the accordion re-opens the outbound before it
-     exits the flow (step-wise back).
+     — plus Save the whole trip, and "See all dates", which closes the modal and opens both
+     legs and both calendars in place. Back inside the accordion re-opens the outbound before
+     it exits the flow (step-wise back).
 3. **Only From, One-way** → browse (`runBrowse` "from"). Every destination reachable from the
    station, ranked by how well-served it is, with availability. Tap a card → the exact trip.
    The list reads direct cards, then connection-only ("via") rows, then the radius "Stations
@@ -154,6 +166,9 @@ span applied to the lists only, and a day could read green while its list was em
    destination → opens the round trip. An empty day offers the next day with a round trip
    and a one-tap switch to one-way.
    - Ranking: `sortGetaways` puts most hours-on-site first for same-day trips.
+   - A card's travel time is the trip it opens: a stay counts that trip's default return,
+     the fastest on the return day (`asOpened`); a same-day card counts the latest return
+     home by midnight, as the trip does.
    - A minimum-on-site gate exists in core (`minOnSiteMin`, default 4h); NOT yet exposed as
      an Advanced control. (Open item.)
 5. **Only To** → reverse browse (`runBrowse` "to"): where you can come *from* to reach the
@@ -182,18 +197,40 @@ the destination is reachable, with its calendar open.
 - **Map** — full-bleed behind a results drawer on mobile, side panel on desktop. Markers per
   destination, hover/selection synced with the list; route line for exact trips; auto-fits
   above the drawer on mobile.
-- **Saved & Favorites** — star a route / save a trip, from the header menu. (The two overlap
-  — a known cleanup item.)
+- **Saved & Favorites** — star a route / save a trip. Both cards sit in the results column;
+  on a phone, where the search form hides that column, the header menu's "Saved trips &
+  favorites" entry opens the saved page (every saved trip, the favorites card below it)
+  from any screen. (The two overlap — a known cleanup item.) A saved trip opens its ticket
+  modal, whose "See all dates" opens the route page; a favorite prefills the Trip tab with
+  that route alone.
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
   reduced motion + compact) with a one-time nudge on weak devices; language.
-- **Mobile** — the form is a sheet that collapses to a search bar; results are a bottom-sheet
-  drawer with detents. Back navigation preserves form state and never lands on a dead screen.
-- **History model** — a genuine navigation (Search, drilling into a route, opening the saved
-  page) pushes **one** history entry carrying a form snapshot, so browser Back returns to the
-  prior page with the form intact. Refining the current view — the Aller simple/retour toggle,
-  the nights stepper, the Flexible pill, picking a calendar day — updates **in place**
-  (`replaceState`), never pushing a new entry. So repeated toggling can't pile up duplicate
-  entries (the old bug where Back needed ~10 presses and the form appeared wiped).
+- **Mobile** — the form is a sheet that collapses to a search bar (a long route wraps it to
+  two lines); results are a bottom-sheet drawer with peek / half / full detents measured
+  below that bar, so the full sheet never covers it. Back navigation preserves form state
+  and never lands on a dead screen.
+- **History model** — a genuine navigation (Search, a tab switch, drilling into a route,
+  opening the saved page) pushes **one** history entry carrying a snapshot of the form, tab
+  included, so browser Back and Forward return to each page with **its own** form intact,
+  never the latest one. Refining the current view — the Aller simple/retour toggle, the nights
+  stepper, the Flexible pill, picking a calendar day — updates **in place** (`replaceState`),
+  never pushing a new entry. So repeated toggling can't pile up duplicate entries (the old bug
+  where Back needed ~10 presses and the form appeared wiped). Details of the model:
+  - The **bare landing URL never shows results**: Back to it restores the form as it was left
+    and shows "press Search". A refinement made on the landing form still pushes one entry
+    (so there is a form to Back to), and since the user never left the form, Back to the
+    landing keeps what was built on that entry (a Flexible range included).
+  - The **saved-trips page** is its own entry: Forward onto it shows it again.
+  - Leaving a list for a route stamps the list's **scroll position**; Back restores it (the
+    drawer on a phone, the main column on a desktop).
+  - An open **dialog** owns one entry: Back closes it and leaves the page under it as it
+    was. Closing it with its own button, Escape or the backdrop pops that entry, so no stray
+    Back step is left behind.
+  - A **Search with nothing to search** (no station) adds no entry: a hint under the button
+    says what is missing.
+  - The `1/2/3` shortcuts never move focus into a field, so they keep working after landing
+    on an empty tab: an empty field gets a ready cursor only while nothing else holds focus,
+    as on the first load.
 - **Deep links** — every search is a shareable URL; legacy `?rdate=` / `?rt=` links still work.
   A station may be named in any case or accent (`from=paris`, `to=LILLE`) and resolves to
   the station that has trains; a name matching no station shows "Unknown station" instead
@@ -209,4 +246,3 @@ the destination is reachable, with its calendar open.
 - Collapse the two save systems (favorite star + Save bookmark) into one.
 - One `openRoute()` primitive (list cards / favorites / map pins behave consistently).
 - One home for the availability calendar (form popover vs results).
-- Mobile browser-Back should close detail pages via history.
