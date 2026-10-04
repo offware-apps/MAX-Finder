@@ -34,7 +34,6 @@
   font-synthesis: none;
 }
 
-:root[data-theme="dark"],
 :root[data-theme="auto"] {
   color-scheme: light dark;
 }
@@ -66,6 +65,7 @@
   }
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #181613;
   --surface: #211f1b;
   --surface-2: #26241f;
@@ -251,7 +251,11 @@ a {
   display: contents;
 }
 .install-btn .install-label {
-  margin-left: 0.4rem;
+  margin-inline-start: 0.4rem;
+}
+/* Phone menu only: on desktop the saved + favorites cards sit in the results column. */
+.saved-btn {
+  display: none;
 }
 .ctl {
   background: var(--surface);
@@ -486,11 +490,11 @@ a {
   display: block;
 }
 .input.has-clear {
-  padding-right: 2rem;
+  padding-inline-end: 2rem;
 }
 .input-clear {
   position: absolute;
-  right: 0.45rem;
+  inset-inline-end: 0.45rem;
   top: 50%;
   transform: translateY(-50%);
   width: 1.4rem;
@@ -560,7 +564,7 @@ a {
 /* A checkbox nested under another (e.g. "only night trains" under "night trains"):
    indented a little and with a subtler label, so it reads as a sub-option. */
 .field-sub {
-  margin-left: 1.25rem;
+  margin-inline-start: 1.25rem;
 }
 .field-sub .field-label {
   color: var(--muted);
@@ -1229,7 +1233,7 @@ a {
 /* "Only night trains" is a sub-option of "night trains", but side by side in the
    toggle band its indent would just read as a column out of alignment. */
 .advanced-toggles .field-sub {
-  margin-left: 0;
+  margin-inline-start: 0;
 }
 .day-badge {
   font-size: 0.68rem;
@@ -1440,7 +1444,8 @@ a {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.2rem 1.5rem 0.2rem 0.5rem;
+  padding-block: 0.2rem;
+  padding-inline: 0.5rem 1.5rem;
   font: inherit;
   font-size: 0.82rem;
   cursor: pointer;
@@ -1651,9 +1656,6 @@ a {
 .dest-name {
   font-weight: 600;
   font-size: 0.95rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -1773,15 +1775,9 @@ a {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border-strong);
-  /* When the row is tight (long hub name / narrow screen) the chip yields
-     first: it shrinks and ellipsizes so the destination name keeps priority. */
-  display: inline-block;
+  /* In a tight row the chip shrinks first and its hub names wrap in full. */
   min-width: 0;
-  flex: 0 1 auto;
-  max-width: 14ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   line-height: 1.5;
 }
 .chip-soft {
@@ -1972,13 +1968,10 @@ a {
   font-size: 0.93rem;
   flex-wrap: wrap;
 }
-/* Let long station names shrink/ellipsize instead of overflowing the card on
-   narrow phones; the arrow icon, day-badge and airport flag keep their size. */
+/* Long station names shrink and wrap inside the card on narrow phones; the arrow
+   icon, day-badge and airport flag keep their size. */
 .leg-route > span:not(.day-badge):not(.airport-badge) {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A small ✈ marking an airport station, next to its name in lists and journeys. */
@@ -1994,7 +1987,7 @@ a {
   width: 13px;
   height: 13px;
 }
-/* Airport name + flag: the name ellipsizes, the ✈ stays put (never clipped). */
+/* Airport name + flag: the name wraps, the ✈ stays beside it. */
 .stn-airport {
   display: inline-flex;
   align-items: center;
@@ -2002,9 +1995,6 @@ a {
   max-width: 100%;
 }
 .stn-airport .stn-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
 }
 .layover {
@@ -2068,11 +2058,7 @@ a {
     row-gap: 0.3rem;
   }
   .dest-name {
-    flex: 1 1 auto;
     order: 1;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
   }
   .dest-main > .chev {
     order: 2;
@@ -2085,20 +2071,7 @@ a {
   }
   .dest-meta .stat-chip,
   .dest-meta .chip,
-  .dest-meta .chip-onsite,
-  .dest-meta .chip-via {
-    max-width: none;
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-  }
-  /* Airport names keep their ✈ badge but the inner text wraps instead of ellipsizing. */
-  .dest-name.stn-airport {
-    white-space: normal;
-  }
-  .dest-name .stn-text {
-    overflow: visible;
-    text-overflow: clip;
+  .dest-meta .chip-onsite {
     white-space: normal;
   }
 }
@@ -2831,12 +2804,15 @@ a {
 select.input {
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 2rem;
+  padding-inline-end: 2rem;
   background-image: var(--chev);
   background-repeat: no-repeat;
   background-position: right 0.6rem center;
   background-size: 13px;
   cursor: pointer;
+}
+[dir="rtl"] select.input {
+  background-position: left 0.6rem center;
 }
 select.input:hover {
   border-color: var(--border-strong);
@@ -3319,9 +3295,6 @@ select.input::-ms-expand {
 }
 .dest-main > .dest-body > .dest-name {
   flex: none;
-  white-space: normal; /* phones never truncate a name — a long one wraps in full */
-  overflow: visible;
-  text-overflow: clip;
 }
 .dest-main > .dest-body > .dest-meta {
   flex: none;
@@ -3588,9 +3561,7 @@ select.input::-ms-expand {
 }
 .dp-value-text {
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
 }
 .dp-value-badge[hidden] {
   display: none;
@@ -3845,10 +3816,7 @@ select.input::-ms-expand {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 1.02rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 0; /* fills the row beside the badge and date, wrapping a long route */
 }
 .mc-date {
   margin-inline-start: auto;
@@ -4275,9 +4243,7 @@ select.input::-ms-expand {
   }
   [data-mform="results"] .msearch-text {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-wrap: balance; /* a long route wraps to two even lines, not a lone "oct." */
   }
   [data-mform="results"] .results-drawer {
     display: flex;
@@ -4447,6 +4413,13 @@ select.input::-ms-expand {
     min-height: 46px;
     font-size: 1rem;
     font-weight: 600;
+  }
+  .header-ctls .saved-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-inline: 0.75rem;
+    text-align: start;
   }
   .header-ctls .menu-actions .ctl {
     display: flex;

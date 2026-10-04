@@ -224,6 +224,7 @@ export const it: Dict = {
   act_saved: "Salvato",
   act_unsave: "Rimuovi dai viaggi salvati",
   saved_title: "Viaggi salvati",
+  menu_saved: "Viaggi salvati e preferiti",
   saved_see_all: "Mostra tutti ({n})",
   saved_count: "{n} viaggio/i salvato/i",
   saved_none: "Nessun viaggio salvato per ora.",

@@ -224,6 +224,7 @@ export const es: Dict = {
   act_saved: "Guardado",
   act_unsave: "Quitar de viajes guardados",
   saved_title: "Viajes guardados",
+  menu_saved: "Viajes guardados y favoritos",
   saved_see_all: "Ver todos ({n})",
   saved_count: "{n} viaje(s) guardado(s)",
   saved_none: "Aún no hay viajes guardados.",
