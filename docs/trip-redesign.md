@@ -120,10 +120,8 @@ The audit found everything traces to **3 root causes**:
 
 - A **direct / one-way trip** is booked from the **right-side button** (the arrow/book button),
   NOT a whole-card tap — as it was originally. Don't make the whole card book.
-- After you **select** a one-way ticket, it **collapses to a small summary** and prompts
-  **"Do you want to come back?"** — tap yes and it extends into a round trip (adds the return
-  step / return calendar). This makes one-way → round trip ONE continuous flow: you always
-  start by picking your outbound, then optionally add the return.
+- A one-way result carries **no "Do you want to come back?" button**: it repeated the
+  form's **Round trip** toggle, which stays the one way to add the return.
 - David likes selecting the **precise return date directly** on the calendar in round trip —
   keep the linked-calendar direct date pick.
 - To refine on the REAL screen after the current build lands (concrete > abstract).

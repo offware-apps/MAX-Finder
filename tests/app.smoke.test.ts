@@ -93,8 +93,10 @@ describe("app (jsdom smoke)", () => {
     const routeCal = root.querySelector(".results .cal-grid");
     expect(routeCal).not.toBeNull();
     expect(routeCal!.querySelectorAll(".cal-cell").length).toBe(30);
-    // A one-way exact-trip shows no "come back?" section — only the round trip does.
+    // A one-way exact-trip shows no return section and no button offering one: the form's
+    // Round trip toggle is the one way to add the return.
     expect(root.querySelector(".od-return")).toBeNull();
+    expect(root.querySelector(".results .od-comeback")).toBeNull();
     expect(root.querySelectorAll(".results .cal-grid").length).toBe(1);
   });
 

@@ -154,7 +154,6 @@ export const de: Dict = {
   link_newtab: "(neuer Tab)",
   rt_outbound: "Hinfahrt",
   rt_inbound: "Rückfahrt",
-  ret_title: "Möchten Sie zurückkommen?",
   ret_none: "Keine kostenlose MAX-Rückfahrt an diesem Tag.",
   keys_title: "Tastenkürzel",
   keys_modes: "1–5: Modus wechseln",

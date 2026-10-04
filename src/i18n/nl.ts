@@ -154,7 +154,6 @@ export const nl: Dict = {
   link_newtab: "(nieuw tabblad)",
   rt_outbound: "Heen",
   rt_inbound: "Terug",
-  ret_title: "Wil je terugkomen?",
   ret_none: "Geen gratis MAX-terugreis op die dag.",
   keys_title: "Sneltoetsen",
   keys_modes: "1–5: modus wisselen",

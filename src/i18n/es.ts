@@ -154,7 +154,6 @@ export const es: Dict = {
   link_newtab: "(nueva pestaña)",
   rt_outbound: "Ida",
   rt_inbound: "Vuelta",
-  ret_title: "¿Quieres volver?",
   ret_none: "No hay vuelta MAX gratis ese día.",
   keys_title: "Atajos de teclado",
   keys_modes: "1–5: cambiar de modo",

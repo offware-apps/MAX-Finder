@@ -96,7 +96,7 @@ Choose your home station and see **every place you can reach for free** on a cho
 The mirror image. Choose a **destination**, and it shows every origin that can get you there for free. Handy when you know where you want to end up but not where to start.
 
 ### 3. Exact trip
-Zoom into **one specific route** — say, your town to the coast. You get any needed connections, a **30-day availability calendar** so you can spot the good dates at a glance, and an optional return leg ("Do you want to come back?").
+Zoom into **one specific route** — say, your town to the coast. You get any needed connections, a **30-day availability calendar** so you can spot the good dates at a glance, and an optional return leg when **Round trip** is on.
 
 ### 4. Tour
 String **several cities into one trip**. You start somewhere, visit a few places (staying a chosen number of days in each), and optionally finish at a fixed city by a target date. The app works out a sensible order and finds a free leg for each hop. Two buttons help you build it: "nearest stop" adds the closest sensible next city, and "Surprise me" adds a random one.

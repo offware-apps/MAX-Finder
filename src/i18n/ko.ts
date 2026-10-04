@@ -154,7 +154,6 @@ export const ko: Dict = {
   link_newtab: "(새 탭)",
   rt_outbound: "가는 편",
   rt_inbound: "오는 편",
-  ret_title: "돌아오시겠어요?",
   ret_none: "그날은 무료 MAX 귀환편이 없습니다.",
   keys_title: "키보드 단축키",
   keys_modes: "1–5: 모드 전환",
