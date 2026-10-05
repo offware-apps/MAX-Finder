@@ -13,17 +13,23 @@ interface WarmMsg {
   id: number;
   query: SearchQuery;
   today: string;
+  /** The train-api base the page's trains came from ("" = the snapshot). */
+  api: string;
 }
 
-// One dataset per profile (the query's pass decides which), loaded on first use.
+// One dataset per profile and source (the query's pass decides which), loaded on first
+// use. The worker must hold the very trains the page holds, or its cache dump would
+// describe other trains: when the page read train-api but the worker could only reach
+// the snapshot, it has nothing to offer and the page computes on its own.
 const loaded = new Map<string, Promise<MaxTrain[]>>();
-function trainsFor(profile: DatasetProfile): Promise<MaxTrain[]> {
-  let p = loaded.get(profile.id);
+function trainsFor(profile: DatasetProfile, api: string): Promise<MaxTrain[]> {
+  const key = `${profile.id} ${api}`;
+  let p = loaded.get(key);
   if (!p) {
-    p = loadDataset(profile)
-      .then((d) => d.trains)
+    p = loadDataset(profile, api)
+      .then((d) => ((d.apiBase ?? "") === api ? d.trains : []))
       .catch(() => []);
-    loaded.set(profile.id, p);
+    loaded.set(key, p);
   }
   return p;
 }
@@ -34,8 +40,8 @@ const ctx = self as unknown as {
 };
 
 ctx.onmessage = (e: MessageEvent<WarmMsg>): void => {
-  const { id, query, today } = e.data;
-  void trainsFor(profileForCard(query.card)).then((trains) => {
+  const { id, query, today, api } = e.data;
+  void trainsFor(profileForCard(query.card), api ?? "").then((trains) => {
     if (!trains.length) {
       ctx.postMessage({ id, dump: null });
       return;

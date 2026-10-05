@@ -65,6 +65,8 @@ interface Deps {
   meta: Dataset["meta"];
   /** The dataset's profile: which pass's trains are loaded. */
   profile: DatasetProfile;
+  /** The train-api base the trains came from ("" = the snapshot); the worker reads the same. */
+  apiBase: string;
   registry: StationRegistry;
 }
 
@@ -613,7 +615,13 @@ async function promptInstall(): Promise<void> {
 }
 
 export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRegistry): void {
-  deps = { trains: dataset.trains, meta: dataset.meta, profile: dataset.profile ?? SNCF_PROFILE, registry };
+  deps = {
+    trains: dataset.trains,
+    meta: dataset.meta,
+    profile: dataset.profile ?? SNCF_PROFILE,
+    apiBase: dataset.apiBase ?? "",
+    registry,
+  };
   setSeatUnknown(!deps.profile.seatKnown);
   rootRef = root;
   settings = store.loadSettings();
@@ -1768,7 +1776,7 @@ function runSearch(scrollTo?: number): void {
   // Otherwise pre-compute the heavy search primitives on the background worker so the
   // main thread stays responsive; the render then reads them straight from cache. If
   // the worker can't help, warmSearch resolves quickly and the render computes on-thread.
-  void warmSearch(deps.trains, query, today).then(() => {
+  void warmSearch(deps.trains, query, today, deps.apiBase).then(() => {
     if (token !== searchToken) return;
     paint();
   });

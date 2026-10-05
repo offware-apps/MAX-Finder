@@ -54,6 +54,8 @@ export interface DatasetProfile {
    * plain array of records.
    */
   decode?: (json: unknown) => RawSourceRecord[] | null;
+  /** This pass's id in train-api (`<base>/sncf/<pass>/all.json`); omitted = snapshot only. */
+  trainApiPass?: string;
 }
 
 /** One raw record before normalization — shape varies per source, so it's untyped. */
@@ -99,6 +101,8 @@ export const SNCF_PROFILE: DatasetProfile = {
   hubs: HUB_STATIONS,
   nonBookablePatterns: NON_BOOKABLE_PATTERNS,
   seatKnown: true,
+  // Both MAX cards read the MAX JEUNE timetable; MAX SENIOR's weekday rule stays a notice.
+  trainApiPass: "max-jeune",
 };
 
 /**
@@ -116,6 +120,7 @@ export const INTERRAIL_PROFILE: DatasetProfile = {
   nonBookablePatterns: [],
   seatKnown: false,
   decode: (json) => (isCompact(json) ? (decodeCompact(json) as unknown as RawSourceRecord[]) : null),
+  trainApiPass: "interrail",
 };
 
 /** Read any value as a pass, defaulting to MAX JEUNE. */

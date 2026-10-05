@@ -1,7 +1,7 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import type { RawRecord } from "../src/types";
 import { encodeCompact, decodeCompact, isCompact, type TimetableRow } from "../src/data/compact";
-import { normalizeRecords } from "../src/data/dataset";
+import { loadDataset, normalizeRecords } from "../src/data/dataset";
 import { INTERRAIL_PROFILE, SNCF_PROFILE, parseCard, profileForCard } from "../src/data/profile";
 import { queryFromParams, queryToParams } from "../src/state/store";
 import { t, setSeatUnknown } from "../src/i18n";
@@ -84,5 +84,51 @@ describe("seat-unknown copy", () => {
     expect(t("cal_legend")).not.toContain("MAX");
     // Keys without a variant are untouched.
     expect(t("card_senior")).toBe("MAX SENIOR");
+  });
+});
+
+describe("train-api source", () => {
+  const BASE = "https://api.test/v1";
+  const compact = encodeCompact([row("2026-10-01"), row("2026-10-02")]);
+  const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads a pass's trains from train-api, every one bookable", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", (url: string) => {
+      urls.push(url);
+      if (url === `${BASE}/sncf/max-jeune/all.json`) return Promise.resolve(json(compact));
+      if (url === `${BASE}/index.json`) return Promise.resolve(json({ updatedAt: "2026-10-05T13:30:00Z" }));
+      return Promise.resolve(new Response("", { status: 404 }));
+    });
+    const d = await loadDataset(SNCF_PROFILE, BASE);
+    expect(d.apiBase).toBe(BASE);
+    expect(d.trains).toHaveLength(2);
+    expect(d.trains.every((t) => t.available)).toBe(true);
+    expect(d.meta).toMatchObject({ updatedAt: "2026-10-05T13:30:00Z", source: "train-api", isSample: false });
+    expect(urls.some((u) => u.includes("tgvmax.json"))).toBe(false);
+  });
+
+  it("falls back to the bundled snapshot when train-api is down", async () => {
+    const snapshot = [{ ...row("2026-10-03"), od_happy_card: "OUI" }];
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url.startsWith(BASE)) return Promise.reject(new Error("offline"));
+      if (url.endsWith("tgvmax.json")) return Promise.resolve(json(snapshot));
+      return Promise.resolve(new Response("", { status: 404 }));
+    });
+    const d = await loadDataset(SNCF_PROFILE, BASE);
+    expect(d.apiBase).toBe("");
+    expect(d.trains.map((t) => t.date)).toEqual(["2026-10-03"]);
+  });
+
+  it("asks Interrail's own file", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", (url: string) => {
+      urls.push(url);
+      return Promise.resolve(url.endsWith("all.json") ? json(compact) : json({}));
+    });
+    await loadDataset(INTERRAIL_PROFILE, BASE);
+    expect(urls).toContain(`${BASE}/sncf/interrail/all.json`);
   });
 });

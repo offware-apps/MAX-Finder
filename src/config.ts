@@ -56,6 +56,17 @@ export const META_URL = `${BASE}data/meta.json`;
 export const INTERRAIL_DATA_URL = `${BASE}data/interrail.json`;
 export const INTERRAIL_META_URL = `${BASE}data/interrail-meta.json`;
 
+/**
+ * train-api (github.com/offware-apps/train-api): every pass's timetable as static JSON,
+ * refreshed daily. The app reads it first and falls back to its own snapshot above.
+ * Its base URL lives in index.html's `<meta name="train-api">` so theme.js can preload
+ * from it and a test server can switch it off; missing or empty = off.
+ */
+export function trainApiBase(): string {
+  if (typeof document === "undefined") return "";
+  return document.querySelector<HTMLMetaElement>('meta[name="train-api"]')?.content.trim().replace(/\/+$/, "") ?? "";
+}
+
 export const SNCF_CONNECT_URL = "https://www.sncf-connect.com/";
 
 export const SITE_URL = "https://offware-apps.github.io/MAX-Finder/";

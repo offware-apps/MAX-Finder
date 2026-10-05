@@ -44,13 +44,19 @@
   } catch (e) {
     /* no URLSearchParams — keep the saved pass */
   }
+  // train-api first when the page names one (see trainApiBase in src/config.ts), else the
+  // bundled snapshot; both MAX cards read the MAX JEUNE timetable.
+  var apiMeta = document.querySelector('meta[name="train-api"]');
+  var api = apiMeta ? (apiMeta.getAttribute("content") || "").trim().replace(/\/+$/, "") : "";
   var script = document.currentScript;
   var base = script && script.src ? script.src.replace(/theme\.js(\?.*)?$/, "") : "";
   var link = document.createElement("link");
   link.rel = "preload";
   link.as = "fetch";
   link.crossOrigin = "anonymous";
-  link.href = base + "data/" + (card === "interrail" ? "interrail.json" : "tgvmax.json");
+  link.href = api
+    ? api + "/sncf/" + (card === "interrail" ? "interrail" : "max-jeune") + "/all.json"
+    : base + "data/" + (card === "interrail" ? "interrail.json" : "tgvmax.json");
   link.setAttribute("data-dataset-preload", ""); // the prerender strips it (scripts/prerender.mjs)
   document.head.appendChild(link);
 })();

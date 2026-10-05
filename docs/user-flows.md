@@ -215,10 +215,12 @@ the destination is reachable, with its calendar open.
   modal, whose "See all dates" opens the route page; a favorite prefills the Trip tab with
   that route alone.
 - **Pass** — the header's pass picker: **MAX JEUNE** (default), **MAX SENIOR**, or
-  **Interrail**. Both MAX passes search the MAX snapshot (trains with a free MAX seat).
-  Interrail searches every train in the SNCF feed (`interrail.json`, see
-  `src/data/compact.ts`): each one takes a pass-holder reservation, international stops
-  included. No open data says whether an Interrail seat is left, so every Interrail result
+  **Interrail**. Timetables come from [train-api](https://github.com/offware-apps/train-api)
+  first (`<meta name="train-api">` in `index.html`, refreshed daily), and from the bundled
+  snapshots when it is off, slow or unreachable. Both MAX passes search the MAX JEUNE
+  timetable (trains with a free MAX seat; `tgvmax.json` as fallback). Interrail searches
+  every train in the SNCF feed (`interrail.json` as fallback, see `src/data/compact.ts`):
+  each one takes a pass-holder reservation, international stops included. No open data says whether an Interrail seat is left, so every Interrail result
   page opens with a notice saying so, and copy that would claim a free MAX seat reads its
   `<key>_ir` variant instead ("green = at least one train"). Switching between a MAX pass
   and Interrail opens the page again on the other snapshot, results shown straight away;

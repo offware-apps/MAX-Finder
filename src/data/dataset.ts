@@ -2,6 +2,7 @@ import type { RawRecord, MaxTrain, DataMeta } from "../types";
 import { parseTimeToMinutes, minutesToHHMM } from "../util/time";
 import { normalizeText } from "./stations";
 import { SNCF_PROFILE, type DatasetProfile, type RawSourceRecord } from "./profile";
+import { decodeCompact, isCompact } from "./compact";
 import sampleData from "../../data/tgvmax.sample.json";
 
 /** Accent-insensitive substring match of a station name against a pattern list. */
@@ -61,20 +62,55 @@ export interface Dataset {
   meta: DataMeta;
   /** The {@link DatasetProfile} these trains were read with (omitted = SNCF MAX). */
   profile?: DatasetProfile;
+  /** The train-api base the trains came from; empty when they came from the snapshot. */
+  apiBase?: string;
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return (await res.json()) as T;
+async function fetchJson<T>(url: string, timeoutMs?: number): Promise<T> {
+  const ctl = timeoutMs ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;
+  try {
+    const res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** A slow train-api must not hold the app up: past this, use the snapshot. */
+const TRAIN_API_TIMEOUT_MS = 8000;
+
+/**
+ * Read a pass's timetable from train-api. Every train in a pass's file is bookable with
+ * that pass, so rows carry the MAX flag the profiles read. Null when it is off,
+ * unreachable, slow or malformed.
+ */
+async function fromTrainApi(profile: DatasetProfile, base: string): Promise<{ rows: RawRecord[]; meta: DataMeta } | null> {
+  if (!base || !profile.trainApiPass) return null;
+  try {
+    const [json, index] = await Promise.all([
+      fetchJson<unknown>(`${base}/sncf/${profile.trainApiPass}/all.json`, TRAIN_API_TIMEOUT_MS),
+      fetchJson<{ updatedAt?: unknown }>(`${base}/index.json`, TRAIN_API_TIMEOUT_MS).catch(() => null),
+    ]);
+    if (!isCompact(json)) return null;
+    const rows = decodeCompact(json).map((r) => ({ ...r, od_happy_card: "OUI" }) as unknown as RawRecord);
+    if (rows.length === 0) return null;
+    const updatedAt = typeof index?.updatedAt === "string" ? index.updatedAt : "";
+    return { rows, meta: { updatedAt, source: "train-api", recordCount: rows.length, isSample: false } };
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Load the committed daily snapshot for a {@link DatasetProfile} (default: SNCF).
- * Falls back to the bundled sample fixture if the snapshot is missing/empty, so the
- * app always has something to show.
+ * Load a {@link DatasetProfile}'s trains (default: SNCF MAX): from train-api at
+ * `apiBase` when it answers, else the committed daily snapshot, else the bundled sample
+ * fixture, so the app always has something to show.
  */
-export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE): Promise<Dataset> {
+export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE, apiBase = ""): Promise<Dataset> {
+  const api = await fromTrainApi(profile, apiBase);
+  if (api) return { trains: normalizeRecords(api.rows, profile), meta: api.meta, profile, apiBase };
   const meta = await fetchJson<DataMeta>(profile.metaUrl).catch(() => null);
   const json = await fetchJson<unknown>(profile.dataUrl).catch(() => null);
   let rows = (profile.decode ? profile.decode(json) : json) as RawRecord[] | null;
@@ -89,6 +125,7 @@ export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE): Promi
   return {
     trains,
     profile,
+    apiBase: "",
     // Metadata describes the snapshot, so it no longer applies once the sample stands in.
     meta:
       meta && !usedSample
