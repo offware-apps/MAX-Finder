@@ -91,6 +91,7 @@ describe("train-api source", () => {
   const BASE = "https://api.test/v1";
   const compact = encodeCompact([row("2026-10-01"), row("2026-10-02")]);
   const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 });
+  const NOW = new Date("2026-10-01T15:00:00Z");
 
   afterEach(() => vi.unstubAllGlobals());
 
@@ -99,14 +100,14 @@ describe("train-api source", () => {
     vi.stubGlobal("fetch", (url: string) => {
       urls.push(url);
       if (url === `${BASE}/sncf/max-jeune/all.json`) return Promise.resolve(json(compact));
-      if (url === `${BASE}/index.json`) return Promise.resolve(json({ updatedAt: "2026-10-05T13:30:00Z" }));
+      if (url === `${BASE}/index.json`) return Promise.resolve(json({ updatedAt: "2026-10-01T13:30:00Z" }));
       return Promise.resolve(new Response("", { status: 404 }));
     });
-    const d = await loadDataset(SNCF_PROFILE, BASE);
+    const d = await loadDataset(SNCF_PROFILE, BASE, NOW);
     expect(d.apiBase).toBe(BASE);
     expect(d.trains).toHaveLength(2);
     expect(d.trains.every((t) => t.available)).toBe(true);
-    expect(d.meta).toMatchObject({ updatedAt: "2026-10-05T13:30:00Z", source: "train-api", isSample: false });
+    expect(d.meta).toMatchObject({ updatedAt: "2026-10-01T13:30:00Z", source: "train-api", isSample: false });
     expect(urls.some((u) => u.includes("tgvmax.json"))).toBe(false);
   });
 
@@ -117,7 +118,7 @@ describe("train-api source", () => {
       if (url.endsWith("tgvmax.json")) return Promise.resolve(json(snapshot));
       return Promise.resolve(new Response("", { status: 404 }));
     });
-    const d = await loadDataset(SNCF_PROFILE, BASE);
+    const d = await loadDataset(SNCF_PROFILE, BASE, NOW);
     expect(d.apiBase).toBe("");
     expect(d.trains.map((t) => t.date)).toEqual(["2026-10-03"]);
   });
@@ -128,7 +129,36 @@ describe("train-api source", () => {
       urls.push(url);
       return Promise.resolve(url.endsWith("all.json") ? json(compact) : json({}));
     });
-    await loadDataset(INTERRAIL_PROFILE, BASE);
+    await loadDataset(INTERRAIL_PROFILE, BASE, NOW);
     expect(urls).toContain(`${BASE}/sncf/interrail/all.json`);
+  });
+
+  const stub = (updatedAt: string, snapshotUp: boolean): unknown =>
+    vi.stubGlobal("fetch", (url: string) => {
+      if (url === `${BASE}/sncf/max-jeune/all.json`) return Promise.resolve(json(compact));
+      if (url === `${BASE}/index.json`) return Promise.resolve(json({ updatedAt }));
+      if (snapshotUp && url.endsWith("tgvmax.json")) return Promise.resolve(json([{ ...row("2026-10-03"), od_happy_card: "OUI" }]));
+      return Promise.reject(new Error("offline"));
+    });
+
+  it("prefers the snapshot when train-api has stopped refreshing", async () => {
+    stub("2026-09-29T13:30:00Z", true);
+    const d = await loadDataset(SNCF_PROFILE, BASE, NOW);
+    expect(d.apiBase).toBe("");
+    expect(d.trains.map((t) => t.date)).toEqual(["2026-10-03"]);
+  });
+
+  it("prefers the snapshot when every train-api date has passed", async () => {
+    stub("2026-10-03T13:30:00Z", true);
+    const d = await loadDataset(SNCF_PROFILE, BASE, new Date("2026-10-03T15:00:00Z"));
+    expect(d.apiBase).toBe("");
+  });
+
+  it("keeps a stale train-api timetable over the sample when the snapshot is out of reach", async () => {
+    stub("2026-09-29T13:30:00Z", false);
+    const d = await loadDataset(SNCF_PROFILE, BASE, NOW);
+    expect(d.apiBase).toBe(BASE);
+    expect(d.meta.isSample).toBe(false);
+    expect(d.trains).toHaveLength(2);
   });
 });

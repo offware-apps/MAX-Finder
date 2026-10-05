@@ -217,7 +217,9 @@ the destination is reachable, with its calendar open.
 - **Pass** — the header's pass picker: **MAX JEUNE** (default), **MAX SENIOR**, or
   **Interrail**. Timetables come from [train-api](https://github.com/offware-apps/train-api)
   first (`<meta name="train-api">` in `index.html`, refreshed daily), and from the bundled
-  snapshots when it is off, slow or unreachable. Both MAX passes search the MAX JEUNE
+  snapshots when it is off, unreachable, more than 36 hours old or entirely in the past (a
+  stale train-api copy still beats the sample offline; the service worker keeps the last
+  one). Both MAX passes search the MAX JEUNE
   timetable (trains with a free MAX seat; `tgvmax.json` as fallback). Interrail searches
   every train in the SNCF feed (`interrail.json` as fallback, see `src/data/compact.ts`):
   each one takes a pass-holder reservation, international stops included. No open data says whether an Interrail seat is left, so every Interrail result

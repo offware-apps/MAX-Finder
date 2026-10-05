@@ -66,27 +66,42 @@ export interface Dataset {
   apiBase?: string;
 }
 
+/**
+ * Fetch and parse JSON. `timeoutMs` bounds the wait for the response headers only: once
+ * the server answers, the body downloads at the link's own pace.
+ */
 async function fetchJson<T>(url: string, timeoutMs?: number): Promise<T> {
   const ctl = timeoutMs ? new AbortController() : null;
   const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;
+  let res: Response;
   try {
-    const res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-    return (await res.json()) as T;
+    res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
   } finally {
     clearTimeout(timer);
   }
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return (await res.json()) as T;
 }
 
-/** A slow train-api must not hold the app up: past this, use the snapshot. */
+/** An unreachable train-api must not hold the app up: past this, use the snapshot. */
 const TRAIN_API_TIMEOUT_MS = 8000;
+
+/** train-api publishes daily; past this age it has stopped refreshing. */
+const TRAIN_API_MAX_AGE_MS = 36 * 3600 * 1000;
+
+interface ApiTimetable {
+  rows: RawRecord[];
+  meta: DataMeta;
+  /** Older than {@link TRAIN_API_MAX_AGE_MS}, or every date already past. */
+  stale: boolean;
+}
 
 /**
  * Read a pass's timetable from train-api. Every train in a pass's file is bookable with
  * that pass, so rows carry the MAX flag the profiles read. Null when it is off,
- * unreachable, slow or malformed.
+ * unreachable or malformed.
  */
-async function fromTrainApi(profile: DatasetProfile, base: string): Promise<{ rows: RawRecord[]; meta: DataMeta } | null> {
+async function fromTrainApi(profile: DatasetProfile, base: string, now: Date): Promise<ApiTimetable | null> {
   if (!base || !profile.trainApiPass) return null;
   try {
     const [json, index] = await Promise.all([
@@ -97,7 +112,10 @@ async function fromTrainApi(profile: DatasetProfile, base: string): Promise<{ ro
     const rows = decodeCompact(json).map((r) => ({ ...r, od_happy_card: "OUI" }) as unknown as RawRecord);
     if (rows.length === 0) return null;
     const updatedAt = typeof index?.updatedAt === "string" ? index.updatedAt : "";
-    return { rows, meta: { updatedAt, source: "train-api", recordCount: rows.length, isSample: false } };
+    const age = now.getTime() - Date.parse(updatedAt);
+    const lastDate = json.dates.reduce((a, d) => (d > a ? d : a), "");
+    const stale = age > TRAIN_API_MAX_AGE_MS || lastDate < now.toISOString().slice(0, 10);
+    return { rows, meta: { updatedAt, source: "train-api", recordCount: rows.length, isSample: false }, stale };
   } catch {
     return null;
   }
@@ -105,12 +123,14 @@ async function fromTrainApi(profile: DatasetProfile, base: string): Promise<{ ro
 
 /**
  * Load a {@link DatasetProfile}'s trains (default: SNCF MAX): from train-api at
- * `apiBase` when it answers, else the committed daily snapshot, else the bundled sample
- * fixture, so the app always has something to show.
+ * `apiBase` when it answers with a fresh timetable, else the committed daily snapshot,
+ * else a stale train-api timetable (offline, from the service worker's cache), else the
+ * bundled sample fixture, so the app always has something to show.
  */
-export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE, apiBase = ""): Promise<Dataset> {
-  const api = await fromTrainApi(profile, apiBase);
-  if (api) return { trains: normalizeRecords(api.rows, profile), meta: api.meta, profile, apiBase };
+export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE, apiBase = "", now = new Date()): Promise<Dataset> {
+  const api = await fromTrainApi(profile, apiBase, now);
+  const fromApi = (a: ApiTimetable): Dataset => ({ trains: normalizeRecords(a.rows, profile), meta: a.meta, profile, apiBase });
+  if (api && !api.stale) return fromApi(api);
   const meta = await fetchJson<DataMeta>(profile.metaUrl).catch(() => null);
   const json = await fetchJson<unknown>(profile.dataUrl).catch(() => null);
   let rows = (profile.decode ? profile.decode(json) : json) as RawRecord[] | null;
@@ -118,6 +138,7 @@ export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE, apiBas
   // Guard the shape too: a malformed snapshot (e.g. an error object instead of an
   // array) would otherwise slip past a length check and crash normalizeRecords.
   if (!Array.isArray(rows) || rows.length === 0) {
+    if (api) return fromApi(api);
     rows = sampleData as RawRecord[]; // bundled fixture: app still works offline
     usedSample = true;
   }
