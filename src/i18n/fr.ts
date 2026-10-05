@@ -308,6 +308,22 @@ export const fr = {
   form_cal_flex_hint: "Choisissez l'aller, puis le retour",
   form_cal_range: "Aller : {from} → Retour : {to}",
   form_cal_range_await: "Aller : {from} — choisissez le retour",
+  // Interrail pass. `<key>_ir` replaces `<key>` when the seat is unknown (see setSeatUnknown).
+  card_interrail: "Interrail",
+  how_interrail: "Interrail : les TGV INOUI, Intercités, trains de nuit et internationaux demandent une réservation pass (payante, places limitées).",
+  interrail_seat_notice: "Interrail : ces trains circulent et se prennent avec une réservation pass. Aucune donnée ouverte ne dit s'il reste une place pass, vérifiez en réservant.",
+  tagline_ir: "Trains SNCF avec un pass Interrail.",
+  how_note_ir: "Cet outil affiche les trains qui circulent (open data SNCF) ; il ne sait pas s'il reste une place pass. Vérifiez sur SNCF Connect.",
+  multi_incomplete_ir: "Certains trajets n'ont aucun train — cet itinéraire est incomplet.",
+  tour_none_ir: "Aucun itinéraire pour ces villes et dates.",
+  res_none_ir: "Aucun train pour ces critères.",
+  nearby_none_ir: "Aucune gare voisine n'a de train pour ce trajet.",
+  hidden_hint_ir: "Aucun train pour votre trajet exact ? Réservez jusqu'à une gare située après la vôtre, sur un train qui dessert votre gare, et descendez plus tôt. Même départ. À vos risques : vérifiez toujours sur SNCF Connect.",
+  book_steps_note_ir: "Une correspondance se réserve train par train — ouvrez chaque lien dans l’ordre.",
+  cal_legend_ir: "vert = au moins un train",
+  ret_none_ir: "Aucun retour ce jour-là.",
+  stat_window_hint_ir: "{trains} trains vers cette destination sur {days} jours à venir. Ouvrez le trajet précis pour voir les dates exactes.",
+  getaway_none_ir: "Aucun aller-retour pour ces critères.",
 };
 
 export type Dict = typeof fr;

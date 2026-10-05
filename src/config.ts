@@ -51,6 +51,10 @@ const BASE = (import.meta.env?.BASE_URL ?? "/") as string;
 /** Base-relative data URLs (work under the GitHub Pages sub-path). */
 export const DATA_URL = `${BASE}data/tgvmax.json`;
 export const META_URL = `${BASE}data/meta.json`;
+/** The Interrail snapshot: every running train in the feed, in the compact format
+ *  (`src/data/compact.ts`), with its own freshness metadata. */
+export const INTERRAIL_DATA_URL = `${BASE}data/interrail.json`;
+export const INTERRAIL_META_URL = `${BASE}data/interrail-meta.json`;
 
 export const SNCF_CONNECT_URL = "https://www.sncf-connect.com/";
 
@@ -63,6 +67,8 @@ export const GITHUB_ISSUES_URL = `${GITHUB_URL}/issues/new`;
 /** Official SNCF pages describing the MAX JEUNE / MAX SENIOR subscriptions. */
 export const MAX_JEUNE_URL = "https://www.sncf-connect.com/catalogue/description/max-jeune";
 export const MAX_SENIOR_URL = "https://www.sncf-connect.com/catalogue/description/max-senior";
+/** Interrail's page on pass-holder reservations for French trains. */
+export const INTERRAIL_FRANCE_URL = "https://www.interrail.com/en/plan-your-trip/reservations/reservations-france";
 
 /** App version + build date, injected from package.json at build time (see vite.config).
  *  Falls back to "dev" when the defines aren't present (e.g. a raw ts-node run). */

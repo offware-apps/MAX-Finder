@@ -5,6 +5,7 @@
 
 import type { MaxTrain, SearchQuery } from "../types";
 import { loadDataset } from "../data/dataset";
+import { profileForCard, type DatasetProfile } from "../data/profile";
 import { clearConnCaches, dumpConnCaches, type ConnCacheDump } from "../core/connections";
 import { warmForQuery } from "./warm";
 
@@ -14,14 +15,18 @@ interface WarmMsg {
   today: string;
 }
 
-let trains: MaxTrain[] = [];
-const ready: Promise<void> = loadDataset()
-  .then((d) => {
-    trains = d.trains;
-  })
-  .catch(() => {
-    trains = [];
-  });
+// One dataset per profile (the query's pass decides which), loaded on first use.
+const loaded = new Map<string, Promise<MaxTrain[]>>();
+function trainsFor(profile: DatasetProfile): Promise<MaxTrain[]> {
+  let p = loaded.get(profile.id);
+  if (!p) {
+    p = loadDataset(profile)
+      .then((d) => d.trains)
+      .catch(() => []);
+    loaded.set(profile.id, p);
+  }
+  return p;
+}
 
 const ctx = self as unknown as {
   postMessage: (m: { id: number; dump: ConnCacheDump | null }) => void;
@@ -30,7 +35,7 @@ const ctx = self as unknown as {
 
 ctx.onmessage = (e: MessageEvent<WarmMsg>): void => {
   const { id, query, today } = e.data;
-  void ready.then(() => {
+  void trainsFor(profileForCard(query.card)).then((trains) => {
     if (!trains.length) {
       ctx.postMessage({ id, dump: null });
       return;

@@ -12,11 +12,13 @@
  */
 (function () {
   var theme = "auto";
+  var card = "";
   try {
     var raw = localStorage.getItem("mj.settings");
     if (raw) {
       var s = JSON.parse(raw);
       if (s && (s.theme === "light" || s.theme === "dark" || s.theme === "auto")) theme = s.theme;
+      if (s && typeof s.card === "string") card = s.card;
     }
   } catch (e) {
     /* private mode / bad JSON — fall back to auto (follows the OS) */
@@ -33,4 +35,22 @@
   // Paint the canvas background immediately (matches --bg light/dark), so there is no
   // white/black flash before the CSS file loads. The stylesheet takes over once parsed.
   root.style.backgroundColor = dark ? "#181613" : "#efece3";
+
+  // Start the dataset download now, before the bundle boots. The pass picks the file
+  // (see profileForCard in src/data/profile.ts): a link's card= wins, else the saved one.
+  try {
+    var linked = new URLSearchParams(location.search).get("card");
+    if (linked) card = linked;
+  } catch (e) {
+    /* no URLSearchParams — keep the saved pass */
+  }
+  var script = document.currentScript;
+  var base = script && script.src ? script.src.replace(/theme\.js(\?.*)?$/, "") : "";
+  var link = document.createElement("link");
+  link.rel = "preload";
+  link.as = "fetch";
+  link.crossOrigin = "anonymous";
+  link.href = base + "data/" + (card === "interrail" ? "interrail.json" : "tgvmax.json");
+  link.setAttribute("data-dataset-preload", ""); // the prerender strips it (scripts/prerender.mjs)
+  document.head.appendChild(link);
 })();
