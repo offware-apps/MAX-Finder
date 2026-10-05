@@ -121,6 +121,7 @@ export interface FormProps {
   overnightMaxConnectionMin: number;
   jeuneUrl: string;
   seniorUrl: string;
+  interrailUrl: string;
   resolveStation: (text: string) => string | undefined;
   stationLabel: (id: string) => string;
   mode: () => SearchMode;
@@ -1468,12 +1469,15 @@ export function createForm(props: FormProps): FormHandle {
     el("ul", { class: "howto-list" }, [
       el("li", { text: t("how_jeune") }),
       el("li", { text: t("how_senior") }),
+      el("li", { text: t("how_interrail") }),
     ]),
     el("p", { class: "howto-links" }, [
       el("span", { class: "muted", text: `${t("how_more")} ` }),
       el("a", { text: "MAX JEUNE", href: props.jeuneUrl, attrs: { target: "_blank", rel: "noopener noreferrer" } }),
       el("span", { class: "muted", text: " · " }),
       el("a", { text: "MAX SENIOR", href: props.seniorUrl, attrs: { target: "_blank", rel: "noopener noreferrer" } }),
+      el("span", { class: "muted", text: " · " }),
+      el("a", { text: "Interrail", href: props.interrailUrl, attrs: { target: "_blank", rel: "noopener noreferrer" } }),
     ]),
     el("p", { class: "muted small", text: t("how_note") }),
   ]);
