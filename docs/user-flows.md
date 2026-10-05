@@ -214,6 +214,17 @@ the destination is reachable, with its calendar open.
   from any screen. (The two overlap — a known cleanup item.) A saved trip opens its ticket
   modal, whose "See all dates" opens the route page; a favorite prefills the Trip tab with
   that route alone.
+- **Pass** — the header's pass picker: **MAX JEUNE** (default), **MAX SENIOR**, or
+  **Interrail**. Both MAX passes search the MAX snapshot (trains with a free MAX seat).
+  Interrail searches every train in the SNCF feed (`interrail.json`, see
+  `src/data/compact.ts`): each one takes a pass-holder reservation, international stops
+  included. No open data says whether an Interrail seat is left, so every Interrail result
+  page opens with a notice saying so, and copy that would claim a free MAX seat reads its
+  `<key>_ir` variant instead ("green = at least one train"). Switching between a MAX pass
+  and Interrail opens the page again on the other snapshot, results shown straight away;
+  switching between the two MAX passes re-runs in place. Booking still opens SNCF Connect,
+  where pass-holder reservations are sold; "How does it work?" links Interrail's page on
+  French reservations. A `card=interrail` link loads the Interrail snapshot at boot.
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
   reduced motion + compact) with a one-time nudge on weak devices; language.
 - **Mobile** — the form is a sheet that collapses to a search bar (a long route wraps it to

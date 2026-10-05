@@ -59,6 +59,8 @@ export function normalizeRecords(rows: RawRecord[], profile: DatasetProfile = SN
 export interface Dataset {
   trains: MaxTrain[];
   meta: DataMeta;
+  /** The {@link DatasetProfile} these trains were read with (omitted = SNCF MAX). */
+  profile?: DatasetProfile;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -74,7 +76,8 @@ async function fetchJson<T>(url: string): Promise<T> {
  */
 export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE): Promise<Dataset> {
   const meta = await fetchJson<DataMeta>(profile.metaUrl).catch(() => null);
-  let rows = await fetchJson<RawRecord[]>(profile.dataUrl).catch(() => null);
+  const json = await fetchJson<unknown>(profile.dataUrl).catch(() => null);
+  let rows = (profile.decode ? profile.decode(json) : json) as RawRecord[] | null;
   let usedSample = false;
   // Guard the shape too: a malformed snapshot (e.g. an error object instead of an
   // array) would otherwise slip past a length check and crash normalizeRecords.
@@ -85,13 +88,16 @@ export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE): Promi
   const trains = normalizeRecords(rows, profile);
   return {
     trains,
+    profile,
+    // Metadata describes the snapshot, so it no longer applies once the sample stands in.
     meta:
-      meta ??
-      ({
-        updatedAt: "",
-        source: usedSample ? "sample" : "unknown",
-        recordCount: trains.length,
-        isSample: usedSample,
-      } as DataMeta),
+      meta && !usedSample
+        ? meta
+        : ({
+            updatedAt: "",
+            source: usedSample ? "sample" : "unknown",
+            recordCount: trains.length,
+            isSample: usedSample,
+          } as DataMeta),
   };
 }
