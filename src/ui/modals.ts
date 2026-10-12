@@ -134,9 +134,12 @@ export function showSettingsModal(opts: {
   reduceMotion: boolean;
   map: boolean;
   compact: boolean;
+  /** Interrail reservation fees on each train (off by default). */
+  fees: boolean;
   onReduceMotion: (v: boolean) => void;
   onMap: (v: boolean) => void;
   onCompact: (v: boolean) => void;
+  onFees: (v: boolean) => void;
   /** Master "Low-end mode": ON = all three savers on, OFF = all three off. */
   onLowEnd: (v: boolean) => void;
 }): void {
@@ -175,6 +178,12 @@ export function showSettingsModal(opts: {
       el("p", { class: "modal-text muted small", text: t("set_perf") }),
       el("div", { class: "set-rows set-master" }, [master]),
       body,
+      el("div", { class: "set-rows" }, [
+        settingSwitch(t("set_fees"), t("set_fees_hint"), opts.fees, (v) => {
+          opts.onFees(v);
+          rebuild({ fees: v });
+        }),
+      ]),
       el("p", {
         class: "muted small set-version",
         text: `MAX Finder v${APP_VERSION}${APP_BUILD ? ` · ${APP_BUILD}` : ""}`,

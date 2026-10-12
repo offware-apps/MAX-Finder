@@ -40,6 +40,8 @@ export interface Settings {
   /** Show the interactive map. Off = no Leaflet/tiles at all: the biggest saving on
    *  low-end devices and slow connections; results go full-width. */
   map: boolean;
+  /** Show Interrail pass-holder reservation fees on each train (off by default). */
+  fees: boolean;
 }
 
 export type Density = "comfortable" | "compact";
@@ -87,6 +89,7 @@ export function loadSettings(): Settings {
     density: s.density === "compact" ? "compact" : "comfortable",
     reduceMotion: s.reduceMotion === true,
     map: s.map !== false, // default on
+    fees: s.fees === true,
   };
 }
 
@@ -307,7 +310,7 @@ export function queryToParams(q: SearchQuery): URLSearchParams {
   return p;
 }
 
-const SORT_KEYS = ["rec", "trains", "days", "closest", "fastest", "name"] as const;
+const SORT_KEYS = ["rec", "trains", "days", "closest", "fastest", "name", "cheapest"] as const;
 
 export function queryFromParams(p: URLSearchParams, fallbackDate: string): SearchQuery {
   const rawMode = p.get("mode") ?? "from";

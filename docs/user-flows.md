@@ -238,7 +238,12 @@ the destination is reachable, with its calendar open.
   with driving alone and flying, from ADEME factors over the straight-line distance
   (`src/util/eco.ts`).
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
-  reduced motion + compact) with a one-time nudge on weak devices; language.
+  reduced motion + compact) with a one-time nudge on weak devices; language. "Interrail
+  reservation fees" (off by default) adds each trip's pass-holder reservation fee, 2nd class,
+  to the Interrail exact-trip list (connections add up their trains), a "Cheapest
+  reservation" sort and a note linking Interrail's fee page. The fees come from
+  `src/data/fees.ts`, the same table train-api publishes; a train with no published fee
+  (SNCF coaches) shows none and sorts last.
 - **Mobile** — the form is a sheet that collapses to a search bar (a long route wraps it to
   two lines); results are a bottom-sheet drawer with peek / half / full detents measured
   below that bar, so the full sheet never covers it. Back navigation preserves form state
