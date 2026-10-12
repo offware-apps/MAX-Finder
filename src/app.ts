@@ -27,6 +27,7 @@ import { findHiddenTrains } from "./core/hidden";
 import { addDays, dayIndex, formatDuration, minutesToHHMM } from "./util/time";
 import { haversineKm } from "./util/geo";
 import { tripCo2 } from "./util/eco";
+import { journeyFee, type Fee } from "./data/fees";
 import { el, clear, isTouch } from "./ui/dom";
 import { buildShell, applyTheme, applyDensity, applyReduceMotion, applyMap, closeHeaderMenu } from "./ui/shell";
 import { showPostcard } from "./ui/toast";
@@ -53,6 +54,7 @@ import {
   MAX_SENIOR_URL,
   INTERRAIL_FRANCE_URL,
   INTERRAIL_PASS_URL,
+  INTERRAIL_FEES_URL,
   ADEME_CO2_URL,
   GITHUB_URL,
   GITHUB_ISSUES_URL,
@@ -850,6 +852,8 @@ function cityInfoUrl(id: string): string {
 function ctx(): RenderCtx {
   return {
     label: (id) => deps.registry.label(id),
+    // Interrail reservation fees: an opt-in setting, and only for the Interrail pass.
+    fee: settings.fees && !deps.profile.seatKnown ? journeyFee : undefined,
     formatDate,
     formatWeekday,
     // Deep-link to SNCF Connect with the trip pre-filled (clean station names, the
@@ -1651,6 +1655,7 @@ const SORT_LABEL = {
   name: "sort_name",
   arrival: "sort_arrival",
   departure: "sort_departure",
+  cheapest: "sort_cheapest",
 } as const;
 
 /** Build the sort-picker option list for a mode from its applicable keys. */
@@ -1672,6 +1677,7 @@ interface SortAccessors<T> {
   durationMin?: (x: T) => number;
   arriveMin?: (x: T) => number; // absolute arrival minutes (earliest first)
   departMin?: (x: T) => number; // departure minutes (earliest first)
+  fee?: (x: T) => Fee | undefined; // Interrail reservation fees (cheapest first, unknown last)
 }
 
 /**
@@ -1704,6 +1710,14 @@ function applySort<T>(items: T[], acc: SortAccessors<T>): T[] {
       break;
     case "name":
       arr.sort((a, b) => acc.name(a).localeCompare(acc.name(b)));
+      break;
+    case "cheapest":
+      if (acc.fee) {
+        const fee = acc.fee;
+        const lo = (x: T): number => fee(x)?.min ?? Infinity;
+        const hi = (x: T): number => fee(x)?.max ?? Infinity;
+        arr.sort((a, b) => lo(a) - lo(b) || hi(a) - hi(b));
+      }
       break;
   }
   return arr;
@@ -2603,6 +2617,18 @@ function appendNearbyAlternatives(
  * journey list booked on click, hidden-city trains and radius alternatives. Round /
  * day trips take the separate {@link runTripSearch} 2-leg accordion instead.
  */
+/** Under an exact trip's list when fees are on: they are indicative, with their source. */
+function feeNoteEl(): HTMLElement {
+  return el("p", { class: "muted small fee-note" }, [
+    el("span", { text: `${t("fee_note")} ` }),
+    el("a", {
+      href: INTERRAIL_FEES_URL,
+      text: t("fee_link"),
+      attrs: { target: "_blank", rel: "noopener noreferrer" },
+    }),
+  ]);
+}
+
 function runOdSearch(c: RenderCtx): void {
   const { trains, registry } = deps;
   if (!query.origin || !query.destination) {
@@ -2674,6 +2700,7 @@ function runOdSearch(c: RenderCtx): void {
       durationMin: (j) => j.totalDurationMin,
       arriveMin: (j) => (flex > 0 ? dayIndex(j.date) * 1440 : 0) + journeyArriveAbs(j),
       departMin: (j) => (flex > 0 ? dayIndex(j.date) * 1440 : 0) + j.departMin,
+      fee: c.fee,
     },
   );
 
@@ -2699,11 +2726,12 @@ function runOdSearch(c: RenderCtx): void {
     refs.results.append(
       render.listToolbarEl(
         t("badge_trains", { n: journeys.length }),
-        query.sort ?? "rec",
-        sortOptions(["rec", "arrival", "departure", "fastest"]),
+        query.sort === "cheapest" && !c.fee ? "rec" : query.sort ?? "rec",
+        sortOptions(c.fee ? ["rec", "arrival", "departure", "fastest", "cheapest"] : ["rec", "arrival", "departure", "fastest"]),
         onSort,
       ),
     );
+    if (c.fee) refs.results.append(feeNoteEl());
     for (const j of journeys)
       refs.results.append(
         render.journeyEl(j, c, { bookOnClick: true, dateLabel: flex > 0 ? formatDate(j.date) : undefined }),
@@ -3443,6 +3471,7 @@ function openSettings(): void {
     reduceMotion: settings.reduceMotion,
     map: settings.map,
     compact: settings.density === "compact",
+    fees: settings.fees,
     onReduceMotion: (v) => {
       settings = { ...settings, reduceMotion: v };
       store.saveSettings(settings);
@@ -3461,6 +3490,11 @@ function openSettings(): void {
       settings = { ...settings, density };
       store.saveSettings(settings);
       applyDensity(density);
+    },
+    onFees: (v) => {
+      settings = { ...settings, fees: v };
+      store.saveSettings(settings);
+      refreshInPlace();
     },
     // Master "Low-end mode": flip all three savers together. ON = the light experience
     // (no motion, no map, compact); OFF = the full experience (motion, map, comfortable).
