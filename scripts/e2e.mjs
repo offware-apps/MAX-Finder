@@ -69,6 +69,13 @@ const T = "TOULOUSE MATABIAU";
 const L = "LYON (intramuros)";
 const enc = encodeURIComponent;
 
+// The committed snapshot's trains, empty when the file can't be read.
+let TRAINS = [];
+try {
+  const raw = JSON.parse(readFileSync(join(DIST, "data", "tgvmax.json"), "utf-8"));
+  TRAINS = Array.isArray(raw) ? raw : raw.trains || [];
+} catch {}
+
 // The round-trip scenario needs a REAL outbound journey on the chosen day: the return
 // availability calendar only renders once the outbound produced at least one journey.
 // Free-MAX availability is spotty day-to-day in the committed snapshot (some dates have
@@ -77,48 +84,34 @@ const enc = encodeURIComponent;
 // next day for the return — so the scenario is deterministic against whatever snapshot
 // is committed. Falls back to the plain now+5d dates if the data can't be read.
 function pickRoundTripDates() {
-  try {
-    const raw = JSON.parse(readFileSync(join(DIST, "data", "tgvmax.json"), "utf-8"));
-    const trains = Array.isArray(raw) ? raw : raw.trains || [];
-    const today = new Date().toISOString().slice(0, 10);
-    const days = [
-      ...new Set(
-        trains
-          .filter((t) => t.origine === P && t.destination === L && t.od_happy_card === "OUI" && t.date >= today)
-          .map((t) => t.date),
-      ),
-    ].sort();
-    if (!days.length) return [DATE, DATE2];
-    const out = days[0];
-    const next = new Date(`${out}T00:00:00Z`).getTime() + 86_400_000;
-    return [out, new Date(next).toISOString().slice(0, 10)];
-  } catch {
-    return [DATE, DATE2];
-  }
+  const today = new Date().toISOString().slice(0, 10);
+  const days = [
+    ...new Set(
+      TRAINS
+        .filter((t) => t.origine === P && t.destination === L && t.od_happy_card === "OUI" && t.date >= today)
+        .map((t) => t.date),
+    ),
+  ].sort();
+  if (!days.length) return [DATE, DATE2];
+  const out = days[0];
+  const next = new Date(`${out}T00:00:00Z`).getTime() + 86_400_000;
+  return [out, new Date(next).toISOString().slice(0, 10)];
 }
 const [RT_DATE, RT_DATE2] = pickRoundTripDates();
 
-// The scroll-restore scenario needs a long "Where to?" list (more than 30 destinations from
-// Paris). Some days in the snapshot have far fewer free MAX seats, so pick the snapshot date
-// with the most destinations from Paris instead of a blind now+5d.
-function pickBusyDate() {
-  try {
-    const raw = JSON.parse(readFileSync(join(DIST, "data", "tgvmax.json"), "utf-8"));
-    const trains = Array.isArray(raw) ? raw : raw.trains || [];
-    const today = new Date().toISOString().slice(0, 10);
-    const dests = new Map();
-    for (const t of trains) {
-      if (t.origine !== P || t.date < today || t.od_happy_card !== "OUI") continue;
-      if (!dests.has(t.date)) dests.set(t.date, new Set());
-      dests.get(t.date).add(t.destination);
-    }
-    const [busiest] = [...dests].sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]))[0] ?? [];
-    return busiest ?? DATE;
-  } catch {
-    return DATE;
+// The Ideas and scroll scenarios need a long Paris list, and a day five days out can carry
+// a dozen destinations. Pick the snapshot day, from tomorrow on, with the most of them.
+function pickBusiestParisDate() {
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const dests = new Map();
+  for (const t of TRAINS) {
+    if (t.origine !== P || t.od_happy_card !== "OUI" || t.date < tomorrow) continue;
+    if (!dests.has(t.date)) dests.set(t.date, new Set());
+    dests.get(t.date).add(t.destination);
   }
+  return [...dests].sort((a, b) => b[1].size - a[1].size)[0]?.[0] ?? DATE;
 }
-const BUSY_DATE = pickBusyDate();
+const BUSY_DATE = pickBusiestParisDate();
 
 // --- tiny assertion harness -------------------------------------------------
 const results = [];
@@ -303,7 +296,7 @@ await scenario(
 // 6. Ideas/best deep link ranks destinations (data-backed, expect populated).
 await scenario(
   "deep-link: ideas from Paris ranks destinations",
-  `${BASE}?mode=best&from=${enc(P)}&date=${DATE}`,
+  `${BASE}?mode=best&from=${enc(P)}&date=${BUSY_DATE}`,
   async (page) => {
     assert((await activeTrip(page)) === "ideas", "active tab should be 'ideas'");
     // Ideas discovers EVERY destination from the origin — it must render a populated ranked
