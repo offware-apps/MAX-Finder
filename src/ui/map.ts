@@ -26,6 +26,90 @@ export interface MarkerInfo {
   connections?: number;
 }
 
+/** Wheel delta, in px, of a pinch that doubles the scale (Chrome reports e^(-deltaY/100)). */
+const PX_PER_ZOOM_LEVEL = 100 * Math.LN2;
+
+/**
+ * Make pinches on the map zoom the map rather than the whole page.
+ *
+ * Browsers report a trackpad pinch (and ctrl+wheel) as a `wheel` event with
+ * `ctrlKey` set, and desktop Safari as `gesture*` events; left alone, both zoom
+ * the page. Touch pinches are already Leaflet's `touchZoom`. Plain wheels are
+ * not touched, so scrolling over the map still scrolls the page.
+ */
+function zoomOnPinch(map: L.Map, el: HTMLElement): void {
+  let delta = 0; // accumulated px, positive = zoom in
+  let at: L.Point | null = null;
+  let timer = 0;
+  // Leaflet drops a zoom asked for mid-animation (its own or a fitBounds), so
+  // hold the pinch until the running one ends.
+  let busy = false;
+  let lastEvent = 0;
+  let touches = 0;
+  let gestureScale = 1;
+
+  const apply = (): void => {
+    timer = 0;
+    if (busy) return;
+    const levels = delta / PX_PER_ZOOM_LEVEL;
+    if (Math.abs(levels) < 0.5) return;
+    const step = Math.round(levels);
+    delta -= step * PX_PER_ZOOM_LEVEL;
+    const zoom = map.getZoom();
+    const target = Math.min(Math.max(zoom + step, map.getMinZoom()), map.getMaxZoom());
+    if (target === zoom) {
+      delta = 0;
+      return;
+    }
+    if (at) map.setZoomAround(at, target);
+    else map.setZoom(target);
+  };
+
+  map.on("zoomstart", () => (busy = true));
+  map.on("zoomend", () => {
+    busy = false;
+    if (!timer) apply();
+  });
+
+  const add = (px: number, e: MouseEvent): void => {
+    const now = Date.now();
+    if (now - lastEvent > 250) delta = 0; // a new pinch: drop the last one's remainder
+    lastEvent = now;
+    delta += px;
+    at = map.mouseEventToContainerPoint(e);
+    if (!timer) timer = window.setTimeout(apply, 40);
+  };
+
+  el.addEventListener(
+    "wheel",
+    (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
+      add(-e.deltaY * unit, e);
+    },
+    { passive: false },
+  );
+
+  // Safari: GestureEvent.scale is relative to the gesture's start.
+  type GestureEvent = MouseEvent & { scale: number };
+  el.addEventListener("touchstart", (e) => (touches = e.touches.length), { passive: true });
+  el.addEventListener("touchend", (e) => (touches = e.touches.length), { passive: true });
+  el.addEventListener("touchcancel", (e) => (touches = e.touches.length), { passive: true });
+  el.addEventListener("gesturestart", (e) => {
+    e.preventDefault();
+    gestureScale = 1;
+  });
+  el.addEventListener("gesturechange", (e) => {
+    e.preventDefault();
+    const g = e as GestureEvent;
+    // A touch pinch (iOS, touch-screen Macs) is already zoomed by touchZoom.
+    if (touches === 0 && g.scale > 0) add(Math.log2(g.scale / gestureScale) * PX_PER_ZOOM_LEVEL, g);
+    gestureScale = g.scale;
+  });
+  el.addEventListener("gestureend", (e) => e.preventDefault());
+}
+
 /** Small Leaflet wrapper that draws routes between stations on a map of France. */
 export class RouteMap {
   private map: L.Map | null = null;
@@ -61,6 +145,9 @@ export class RouteMap {
         // phones. Canvas draws them all in one paint and pans smoothly.
         preferCanvas: true,
         dragging: true,
+        // A plain wheel or two-finger scroll keeps scrolling the page past the
+        // map; pinches (trackpad, Safari gestures, ctrl+wheel) zoom it instead,
+        // see zoomOnPinch.
         scrollWheelZoom: false,
         // Pinch-zoom and double-tap zoom stay on: on phones the full-bleed map is
         // the centrepiece and the +/- control is hidden under 860px (styles.css),
@@ -71,6 +158,7 @@ export class RouteMap {
         touchZoom: true,
         zoomControl: true,
       }).setView([46.6, 2.4], 5);
+      zoomOnPinch(this.map, this.container);
       this.map.attributionControl.setPrefix(false); // drop the default "Leaflet" + flag prefix
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
