@@ -26,58 +26,40 @@ export interface MarkerInfo {
   connections?: number;
 }
 
-/** Wheel delta, in px, of a pinch that doubles the scale (Chrome reports e^(-deltaY/100)). */
+/** Wheel px of a pinch that doubles the scale (Chrome reports e^(-deltaY/100)). */
 const PX_PER_ZOOM_LEVEL = 100 * Math.LN2;
 
 /**
  * Make pinches on the map zoom the map rather than the whole page.
  *
- * Browsers report a trackpad pinch (and ctrl+wheel) as a `wheel` event with
- * `ctrlKey` set, and desktop Safari as `gesture*` events; left alone, both zoom
- * the page. Touch pinches are already Leaflet's `touchZoom`. Plain wheels are
- * not touched, so scrolling over the map still scrolls the page.
+ * A trackpad pinch (and ctrl+wheel) arrives as a `wheel` event with `ctrlKey`,
+ * and as `gesture*` events in desktop Safari; left alone, both zoom the page.
+ * Touch pinches are Leaflet's `touchZoom`, and plain wheels still scroll the page.
  */
 function zoomOnPinch(map: L.Map, el: HTMLElement): void {
-  let delta = 0; // accumulated px, positive = zoom in
-  let at: L.Point | null = null;
+  let levels = 0; // pinched but not yet applied, + = zoom in
+  let at = map.getSize().divideBy(2);
   let timer = 0;
-  // Leaflet drops a zoom asked for mid-animation (its own or a fitBounds), so
-  // hold the pinch until the running one ends.
-  let busy = false;
-  let lastEvent = 0;
+  let zooming = false; // Leaflet drops a zoom asked for mid-animation, so wait for it
   let touches = 0;
-  let gestureScale = 1;
+  let scale = 1;
 
   const apply = (): void => {
     timer = 0;
-    if (busy) return;
-    const levels = delta / PX_PER_ZOOM_LEVEL;
-    if (Math.abs(levels) < 0.5) return;
     const step = Math.round(levels);
-    delta -= step * PX_PER_ZOOM_LEVEL;
-    const zoom = map.getZoom();
-    const target = Math.min(Math.max(zoom + step, map.getMinZoom()), map.getMaxZoom());
-    if (target === zoom) {
-      delta = 0;
-      return;
-    }
-    if (at) map.setZoomAround(at, target);
-    else map.setZoom(target);
+    if (zooming || !step) return;
+    levels = 0;
+    map.setZoomAround(at, map.getZoom() + step);
   };
-
-  map.on("zoomstart", () => (busy = true));
+  map.on("zoomstart", () => (zooming = true));
   map.on("zoomend", () => {
-    busy = false;
-    if (!timer) apply();
+    zooming = false;
+    apply();
   });
-
-  const add = (px: number, e: MouseEvent): void => {
-    const now = Date.now();
-    if (now - lastEvent > 250) delta = 0; // a new pinch: drop the last one's remainder
-    lastEvent = now;
-    delta += px;
+  const pinch = (by: number, e: MouseEvent): void => {
+    levels += by;
     at = map.mouseEventToContainerPoint(e);
-    if (!timer) timer = window.setTimeout(apply, 40);
+    timer ||= window.setTimeout(apply, 40);
   };
 
   el.addEventListener(
@@ -85,27 +67,25 @@ function zoomOnPinch(map: L.Map, el: HTMLElement): void {
     (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
-      add(-e.deltaY * unit, e);
+      pinch(-(e.deltaMode ? e.deltaY * 33 : e.deltaY) / PX_PER_ZOOM_LEVEL, e);
     },
     { passive: false },
   );
 
-  // Safari: GestureEvent.scale is relative to the gesture's start.
-  type GestureEvent = MouseEvent & { scale: number };
-  el.addEventListener("touchstart", (e) => (touches = e.touches.length), { passive: true });
-  el.addEventListener("touchend", (e) => (touches = e.touches.length), { passive: true });
-  el.addEventListener("touchcancel", (e) => (touches = e.touches.length), { passive: true });
+  // Safari: `scale` is relative to the gesture's start. A touch pinch also fires
+  // these, but touchZoom already handles it.
+  for (const t of ["touchstart", "touchend", "touchcancel"] as const) {
+    el.addEventListener(t, (e) => (touches = e.touches.length), { passive: true });
+  }
   el.addEventListener("gesturestart", (e) => {
     e.preventDefault();
-    gestureScale = 1;
+    scale = 1;
   });
   el.addEventListener("gesturechange", (e) => {
     e.preventDefault();
-    const g = e as GestureEvent;
-    // A touch pinch (iOS, touch-screen Macs) is already zoomed by touchZoom.
-    if (touches === 0 && g.scale > 0) add(Math.log2(g.scale / gestureScale) * PX_PER_ZOOM_LEVEL, g);
-    gestureScale = g.scale;
+    const g = e as MouseEvent & { scale: number };
+    if (!touches && g.scale > 0) pinch(Math.log2(g.scale / scale), g);
+    scale = g.scale;
   });
   el.addEventListener("gestureend", (e) => e.preventDefault());
 }
