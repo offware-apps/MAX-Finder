@@ -135,11 +135,12 @@ for (const map of [false, true]) {
 const L = (id) => encodeURIComponent(id);
 const CDG = "AEROPORT ROISSY CDG 2 TGV", VAL = "VALENCE TGV AUVERGNE RHONE ALPES", SPC = "ST PIERRE DES CORPS";
 const DATE2 = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10);
-// The first day the snapshot runs both legs of a connection through `hub`, so connecting
-// cards (via chips, long leg names) render; DATE when the data has none.
+// The first day, from tomorrow on, the snapshot runs both legs of a connection through `hub`,
+// so connecting cards (via chips, long leg names) render; DATE when the data has none.
+const TOMORROW = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 const snapshot = JSON.parse(readFileSync(join(DIST, "data", "tgvmax.json"), "utf-8"));
 const runs = (o, d) =>
-  new Set(snapshot.filter((t) => t.origine === o && t.destination === d && t.date >= DATE).map((t) => t.date));
+  new Set(snapshot.filter((t) => t.origine === o && t.destination === d && t.date >= TOMORROW).map((t) => t.date));
 const viaDate = (o, hub, d) => [...runs(o, hub)].filter((day) => runs(hub, d).has(day)).sort()[0] ?? DATE;
 const PARIS = "PARIS (intramuros)", LYON = "LYON (intramuros)", BDX = "BORDEAUX ST JEAN", TLS = "TOULOUSE MATABIAU";
 const textPages = [
