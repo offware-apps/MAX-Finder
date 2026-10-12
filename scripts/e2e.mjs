@@ -96,6 +96,28 @@ function pickRoundTripDates() {
 }
 const [RT_DATE, RT_DATE2] = pickRoundTripDates();
 
+// The scroll-restore scenario needs a long "Where to?" list (more than 30 destinations from
+// Paris). Some days in the snapshot have far fewer free MAX seats, so pick the snapshot date
+// with the most destinations from Paris instead of a blind now+5d.
+function pickBusyDate() {
+  try {
+    const raw = JSON.parse(readFileSync(join(DIST, "data", "tgvmax.json"), "utf-8"));
+    const trains = Array.isArray(raw) ? raw : raw.trains || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const dests = new Map();
+    for (const t of trains) {
+      if (t.origine !== P || t.date < today || t.od_happy_card !== "OUI") continue;
+      if (!dests.has(t.date)) dests.set(t.date, new Set());
+      dests.get(t.date).add(t.destination);
+    }
+    const [busiest] = [...dests].sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]))[0] ?? [];
+    return busiest ?? DATE;
+  } catch {
+    return DATE;
+  }
+}
+const BUSY_DATE = pickBusyDate();
+
 // --- tiny assertion harness -------------------------------------------------
 const results = [];
 class Fail extends Error {}
@@ -685,7 +707,7 @@ await scenario(
 for (const [viewport, label] of [[MOBILE, "390px drawer"], [undefined, "1366px column"]]) {
   await scenario(
     `history: Back from a route restores the list's scroll (${label})`,
-    `${BASE}?mode=from&from=${enc(P)}&date=${DATE}`,
+    `${BASE}?mode=from&from=${enc(P)}&date=${BUSY_DATE}`,
     async (page) => {
       assert(await until(async () => (await $count(page, ".results .group-card")) > 30), "precondition: short list");
       const scrollTop = () =>
