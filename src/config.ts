@@ -80,6 +80,10 @@ export const MAX_JEUNE_URL = "https://www.sncf-connect.com/catalogue/description
 export const MAX_SENIOR_URL = "https://www.sncf-connect.com/catalogue/description/max-senior";
 /** Interrail's page on pass-holder reservations for French trains. */
 export const INTERRAIL_FRANCE_URL = "https://www.interrail.com/en/plan-your-trip/reservations/reservations-france";
+/** Interrail Global Pass conditions: who can buy it, and the country-of-residence rule. */
+export const INTERRAIL_PASS_URL = "https://www.interrail.com/en/interrail-passes/global-pass";
+/** ADEME's CO₂ comparator, the source of the per-km factors in src/util/eco.ts. */
+export const ADEME_CO2_URL = "https://impactco2.fr/outils/transport";
 
 /** App version + build date, injected from package.json at build time (see vite.config).
  *  Falls back to "dev" when the defines aren't present (e.g. a raw ts-node run). */

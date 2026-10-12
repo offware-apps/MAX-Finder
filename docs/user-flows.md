@@ -229,6 +229,14 @@ the destination is reachable, with its calendar open.
   switching between the two MAX passes re-runs in place. Booking still opens SNCF Connect,
   where pass-holder reservations are sold; "How does it work?" links Interrail's page on
   French reservations. A `card=interrail` link loads the Interrail snapshot at boot.
+  "How does it work?" lists who can use each pass and its rules (MAX JEUNE 16 to 27,
+  MAX SENIOR from 60, booking window and daily limits; Interrail for residents of the 33
+  countries, Eurail for everyone else) and the special case for people living in France (a
+  Global Pass covers one trip out and one trip back in), with links to the official pages.
+  The Interrail seat notice on results ends with that France residence rule. An exact
+  trip (Trip tab, origin and destination) shows one line comparing the trip's CO₂ by train
+  with driving alone and flying, from ADEME factors over the straight-line distance
+  (`src/util/eco.ts`).
 - **Settings** — theme, MAX Jeune/Senior, comfortable/compact, and Low-end mode (map off +
   reduced motion + compact) with a one-time nudge on weak devices; language.
 - **Mobile** — the form is a sheet that collapses to a search bar (a long route wraps it to

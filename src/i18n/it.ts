@@ -44,9 +44,9 @@ export const it: Dict = {
   card_jeune: "MAX JEUNE",
   card_senior: "MAX SENIOR",
   how_title: "Come funziona?",
-  how_jeune: "MAX JEUNE: prenotazioni gratuite 7 giorni su 7, secondo disponibilità.",
+  how_jeune: "MAX JEUNE (dai 16 ai 27 anni): 79 € al mese, vincolo di 12 mesi. Posti a 0 € in 2ª classe su TGV INOUI, OUIGO alta velocità e Intercités con prenotazione, in Francia, Lussemburgo e Friburgo. Niente posti a 0 € il venerdì e la domenica pomeriggio e sera, né alla vigilia delle grandi partenze per le vacanze.",
   how_senior:
-    "MAX SENIOR: dal lunedì al venerdì, solo nelle ore di morbida — non nei fine settimana né nelle ore di punta (venerdì pomeriggio/sera, lunedì mattina, vigilie di festivi).",
+    "MAX SENIOR (dai 60 anni, stesso prezzo): dal lunedì al venerdì, solo nelle ore di morbida — non nei fine settimana né nelle ore di punta (venerdì pomeriggio/sera, lunedì mattina, vigilie di festivi).",
   how_note:
     "Questo strumento mostra i posti MAX aperti alla prenotazione (dati aperti SNCF); non applica queste regole per abbonamento. Verifica su SNCF Connect.",
   senior_weekend_warn: "MAX SENIOR non è valido nei fine settimana.",
@@ -294,8 +294,15 @@ export const it: Dict = {
   form_cal_range_await: "Andata: {from} — scegli il ritorno",
   // Interrail pass. `<key>_ir` replaces `<key>` when the seat is unknown (see setSeatUnknown).
   card_interrail: "Interrail",
-  how_interrail: "Interrail: TGV INOUI, Intercités, treni notturni e internazionali richiedono una prenotazione pass (a pagamento, posti limitati).",
+  how_interrail: "Interrail: un solo pass per i treni di 33 paesi europei. TGV, Intercités, treni notturni e internazionali richiedono una prenotazione a pagamento (da 10 a 20 € sul TGV, posti limitati).",
   interrail_seat_notice: "Interrail: questi treni circolano e si prendono con una prenotazione pass. Nessun dato aperto dice se resta un posto pass: verifica al momento della prenotazione.",
+  how_max_rules: "MAX: prenoti da 30 giorni prima, fino a 6 viaggi alla volta, un viaggio a 0 € al giorno dalla stessa stazione, e confermi ogni viaggio 1 o 2 giorni prima.",
+  how_ir_who: "Chi può usarlo: chi vive in Europa (cittadini o residenti legali di uno dei 33 paesi). Gli altri comprano un pass Eurail. Giovani fino a 27 anni, senior dai 60, bambini da 4 a 11 anni gratis con un pass Bambino.",
+  how_ir_home: "Vivi in Francia? Un Global Pass copre solo un viaggio per uscire dalla Francia e uno per rientrare, e non esiste un One Country Pass per il proprio paese.",
+  how_ir_link: "Interrail: chi può usarlo",
+  how_eco: "Ecologia: un viaggio in TGV emette circa 50 volte meno CO₂ che in auto da soli e 100 volte meno che in aereo (dati ADEME).",
+  eco_trip: "In treno, questo viaggio emette circa {train} kg di CO₂e, contro {car} kg in auto da soli e {plane} kg in aereo (ADEME, {km} km in linea d'aria).",
+  eco_link: "Dati CO₂ dell'ADEME",
   tagline_ir: "Treni SNCF con un pass Interrail.",
   how_note_ir: "Questo strumento mostra i treni che circolano (dati aperti SNCF); non sa se resta un posto pass. Verifica su SNCF Connect.",
   multi_incomplete_ir: "Alcune tratte non hanno treni — questo itinerario è incompleto.",

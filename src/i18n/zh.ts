@@ -44,9 +44,9 @@ export const zh: Dict = {
   card_jeune: "MAX JEUNE",
   card_senior: "MAX SENIOR",
   how_title: "如何使用？",
-  how_jeune: "MAX JEUNE：每周 7 天免费预订，视座位情况而定。",
+  how_jeune: "MAX JEUNE（16 至 27 岁）：每月 79 €，至少订阅 12 个月。在法国、卢森堡和弗莱堡，可 0 € 预订 TGV INOUI、OUIGO 高速列车和需订座的 Intercités 二等座。周五、周日下午和晚上以及大型假期出行前夕没有 0 € 座位。",
   how_senior:
-    "MAX SENIOR：仅限周一至周五的非高峰时段——不含周末及高峰时段（周五下午/晚上、周一上午、节假日前夕）。",
+    "MAX SENIOR（60 岁及以上，价格相同）：仅限周一至周五的非高峰时段——不含周末及高峰时段（周五下午/晚上、周一上午、节假日前夕）。",
   how_note:
     "本工具显示可预订的 MAX 座位（SNCF 开放数据），不强制执行各通票的规则。请在 SNCF Connect 上核实。",
   senior_weekend_warn: "MAX SENIOR 周末不可用。",
@@ -293,8 +293,15 @@ export const zh: Dict = {
   form_cal_range_await: "去程：{from} — 选择返程",
   // Interrail pass. `<key>_ir` replaces `<key>` when the seat is unknown (see setSeatUnknown).
   card_interrail: "Interrail",
-  how_interrail: "Interrail：TGV INOUI、Intercités、夜车和国际列车需要通票持有人订座（收费，座位有限）。",
+  how_interrail: "Interrail：一张通票乘坐 33 个欧洲国家的火车。TGV、Intercités、夜车和国际列车需要付费订座（TGV 为 10 至 20 €，座位有限）。",
   interrail_seat_notice: "Interrail：这些列车正常运行，凭通票订座乘坐。没有开放数据说明是否还有通票座位，请在预订时确认。",
+  how_max_rules: "MAX：可提前 30 天预订，同时最多 6 个行程，同一车站每天一个 0 € 行程，每个行程需在出发前 1 至 2 天确认。",
+  how_ir_who: "适用人群：居住在欧洲的人（33 个国家之一的公民或合法居民）。其他人购买 Eurail 通票。青年至 27 岁，老年 60 岁起，4 至 11 岁儿童凭儿童通票免费。",
+  how_ir_home: "住在法国？Global Pass 只包含一次离开法国和一次返回法国的行程，且没有适用于本国的 One Country Pass。",
+  how_ir_link: "Interrail：适用人群",
+  how_eco: "环保：乘坐 TGV 出行的二氧化碳排放约为独自驾车的五十分之一、乘飞机的百分之一（ADEME 数据）。",
+  eco_trip: "乘火车，这段行程约排放 {train} kg CO₂e，独自驾车为 {car} kg，乘飞机为 {plane} kg（ADEME，直线距离 {km} km）。",
+  eco_link: "ADEME 二氧化碳数据",
   tagline_ir: "持 Interrail 通票乘坐的 SNCF 列车。",
   how_note_ir: "本工具显示运行中的列车（SNCF 开放数据），无法得知是否还有通票座位。请在 SNCF Connect 上核实。",
   multi_incomplete_ir: "部分行程没有列车——此行程不完整。",

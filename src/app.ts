@@ -26,6 +26,7 @@ import { availabilityCalendar, reachableCountCalendar, dateRange } from "./core/
 import { findHiddenTrains } from "./core/hidden";
 import { addDays, dayIndex, formatDuration, minutesToHHMM } from "./util/time";
 import { haversineKm } from "./util/geo";
+import { tripCo2 } from "./util/eco";
 import { el, clear, isTouch } from "./ui/dom";
 import { buildShell, applyTheme, applyDensity, applyReduceMotion, applyMap, closeHeaderMenu } from "./ui/shell";
 import { showPostcard } from "./ui/toast";
@@ -51,6 +52,8 @@ import {
   MAX_JEUNE_URL,
   MAX_SENIOR_URL,
   INTERRAIL_FRANCE_URL,
+  INTERRAIL_PASS_URL,
+  ADEME_CO2_URL,
   GITHUB_URL,
   GITHUB_ISSUES_URL,
   OVERNIGHT_MAX_CONNECTION_MIN,
@@ -1901,7 +1904,7 @@ function renderSearch(): void {
   // a weekend RETURN on a later day, since either leg must be booked free.
   // No open data says whether an Interrail seat is left: say so above every result.
   if (!deps.profile.seatKnown) {
-    refs.results.append(el("p", { class: "notice", text: t("interrail_seat_notice") }));
+    refs.results.append(el("p", { class: "notice", text: `${t("interrail_seat_notice")} ${t("how_ir_home")}` }));
   }
   if (query.card === "senior") {
     if (isWeekend(query.date)) {
@@ -1910,6 +1913,22 @@ function renderSearch(): void {
     const retDay = query.returnDate;
     if (tripIsRound() && retDay && retDay !== query.date && isWeekend(retDay)) {
       refs.results.append(el("p", { class: "notice", text: t("senior_weekend_return_warn") }));
+    }
+  }
+
+  // An exact trip says what the train saves in CO₂ against driving or flying it.
+  if (query.mode === "od" && query.origin && query.destination) {
+    const km = stationDistanceKm(query.origin, query.destination);
+    if (Number.isFinite(km) && km >= 1) {
+      const co2 = tripCo2(Math.round(km));
+      const fmt = new Intl.NumberFormat(getLang());
+      const kg = (v: number) => fmt.format(v < 10 ? Math.round(v * 10) / 10 : Math.round(v));
+      refs.results.append(
+        el("p", {
+          class: "eco-line",
+          text: t("eco_trip", { train: kg(co2.train), car: kg(co2.car), plane: kg(co2.plane), km: fmt.format(co2.km) }),
+        }),
+      );
     }
   }
 
@@ -3840,6 +3859,8 @@ function buildLayout(root: HTMLElement): void {
     jeuneUrl: MAX_JEUNE_URL,
     seniorUrl: MAX_SENIOR_URL,
     interrailUrl: INTERRAIL_FRANCE_URL,
+    interrailPassUrl: INTERRAIL_PASS_URL,
+    ecoUrl: ADEME_CO2_URL,
     resolveStation,
     stationLabel: (id) => deps.registry.label(id),
     mode: () => query.mode,
