@@ -26,6 +26,70 @@ export interface MarkerInfo {
   connections?: number;
 }
 
+/** Wheel px of a pinch that doubles the scale (Chrome reports e^(-deltaY/100)). */
+const PX_PER_ZOOM_LEVEL = 100 * Math.LN2;
+
+/**
+ * Make pinches on the map zoom the map rather than the whole page.
+ *
+ * A trackpad pinch (and ctrl+wheel) arrives as a `wheel` event with `ctrlKey`,
+ * and as `gesture*` events in desktop Safari; left alone, both zoom the page.
+ * Touch pinches are Leaflet's `touchZoom`, and plain wheels still scroll the page.
+ */
+function zoomOnPinch(map: L.Map, el: HTMLElement): void {
+  let levels = 0; // pinched but not yet applied, + = zoom in
+  let at = map.getSize().divideBy(2);
+  let timer = 0;
+  let zooming = false; // Leaflet drops a zoom asked for mid-animation, so wait for it
+  let touches = 0;
+  let scale = 1;
+
+  const apply = (): void => {
+    timer = 0;
+    const step = Math.round(levels);
+    if (zooming || !step) return;
+    levels = 0;
+    map.setZoomAround(at, map.getZoom() + step);
+  };
+  map.on("zoomstart", () => (zooming = true));
+  map.on("zoomend", () => {
+    zooming = false;
+    apply();
+  });
+  const pinch = (by: number, e: MouseEvent): void => {
+    levels += by;
+    at = map.mouseEventToContainerPoint(e);
+    timer ||= window.setTimeout(apply, 40);
+  };
+
+  el.addEventListener(
+    "wheel",
+    (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      pinch(-(e.deltaMode ? e.deltaY * 33 : e.deltaY) / PX_PER_ZOOM_LEVEL, e);
+    },
+    { passive: false },
+  );
+
+  // Safari: `scale` is relative to the gesture's start. A touch pinch also fires
+  // these, but touchZoom already handles it.
+  for (const t of ["touchstart", "touchend", "touchcancel"] as const) {
+    el.addEventListener(t, (e) => (touches = e.touches.length), { passive: true });
+  }
+  el.addEventListener("gesturestart", (e) => {
+    e.preventDefault();
+    scale = 1;
+  });
+  el.addEventListener("gesturechange", (e) => {
+    e.preventDefault();
+    const g = e as MouseEvent & { scale: number };
+    if (!touches && g.scale > 0) pinch(Math.log2(g.scale / scale), g);
+    scale = g.scale;
+  });
+  el.addEventListener("gestureend", (e) => e.preventDefault());
+}
+
 /** Small Leaflet wrapper that draws routes between stations on a map of France. */
 export class RouteMap {
   private map: L.Map | null = null;
@@ -61,6 +125,9 @@ export class RouteMap {
         // phones. Canvas draws them all in one paint and pans smoothly.
         preferCanvas: true,
         dragging: true,
+        // A plain wheel or two-finger scroll keeps scrolling the page past the
+        // map; pinches (trackpad, Safari gestures, ctrl+wheel) zoom it instead,
+        // see zoomOnPinch.
         scrollWheelZoom: false,
         // Pinch-zoom and double-tap zoom stay on: on phones the full-bleed map is
         // the centrepiece and the +/- control is hidden under 860px (styles.css),
@@ -71,6 +138,7 @@ export class RouteMap {
         touchZoom: true,
         zoomControl: true,
       }).setView([46.6, 2.4], 5);
+      zoomOnPinch(this.map, this.container);
       this.map.attributionControl.setPrefix(false); // drop the default "Leaflet" + flag prefix
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap",
