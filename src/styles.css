@@ -1308,6 +1308,15 @@ a {
   font-size: 0.86rem;
   font-weight: 560;
 }
+/* One quiet line on an exact trip: the train's CO₂ against car and plane. */
+.eco-line {
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.75rem;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
 
 /* ---- buttons ---- */
 .btn {

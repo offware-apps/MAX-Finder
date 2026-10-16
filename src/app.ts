@@ -1,6 +1,7 @@
 import type { Dataset } from "./data/dataset";
+import { SNCF_PROFILE, parseCard, profileForCard, type DatasetProfile } from "./data/profile";
 import { StationRegistry } from "./data/stations";
-import type { SearchQuery, SearchMode, MaxTrain, Journey, SortKey, CalendarDay, StayChoice } from "./types";
+import type { CardType, SearchQuery, SearchMode, MaxTrain, Journey, SortKey, CalendarDay, StayChoice } from "./types";
 import { stayNights, stayFromNights } from "./core/roundtrip";
 import {
   reachableDestinations,
@@ -25,6 +26,7 @@ import { availabilityCalendar, reachableCountCalendar, dateRange } from "./core/
 import { findHiddenTrains } from "./core/hidden";
 import { addDays, dayIndex, formatDuration, minutesToHHMM } from "./util/time";
 import { haversineKm } from "./util/geo";
+import { tripCo2 } from "./util/eco";
 import { el, clear, isTouch } from "./ui/dom";
 import { buildShell, applyTheme, applyDensity, applyReduceMotion, applyMap, closeHeaderMenu } from "./ui/shell";
 import { showPostcard } from "./ui/toast";
@@ -44,11 +46,14 @@ import {
   modalPopstate,
 } from "./ui/modals";
 import { generateBookingUrl } from "./util/booking";
-import { t, setLang, getLang, isLang } from "./i18n";
+import { t, setLang, getLang, isLang, setSeatUnknown } from "./i18n";
 import * as store from "./state/store";
 import {
   MAX_JEUNE_URL,
   MAX_SENIOR_URL,
+  INTERRAIL_FRANCE_URL,
+  INTERRAIL_PASS_URL,
+  ADEME_CO2_URL,
   GITHUB_URL,
   GITHUB_ISSUES_URL,
   OVERNIGHT_MAX_CONNECTION_MIN,
@@ -61,6 +66,10 @@ import { notify } from "./pwa/register";
 interface Deps {
   trains: MaxTrain[];
   meta: Dataset["meta"];
+  /** The dataset's profile: which pass's trains are loaded. */
+  profile: DatasetProfile;
+  /** The train-api base the trains came from ("" = the snapshot); the worker reads the same. */
+  apiBase: string;
   registry: StationRegistry;
 }
 
@@ -609,7 +618,14 @@ async function promptInstall(): Promise<void> {
 }
 
 export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRegistry): void {
-  deps = { trains: dataset.trains, meta: dataset.meta, registry };
+  deps = {
+    trains: dataset.trains,
+    meta: dataset.meta,
+    profile: dataset.profile ?? SNCF_PROFILE,
+    apiBase: dataset.apiBase ?? "",
+    registry,
+  };
+  setSeatUnknown(!deps.profile.seatKnown);
   rootRef = root;
   settings = store.loadSettings();
   const urlLang = new URLSearchParams(location.search).get("lang");
@@ -664,6 +680,7 @@ export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRe
   window.addEventListener("popstate", (ev) => {
     if (modalPopstate(ev.state)) return; // Back closed a dialog; the page under it stays
     const searched = queryFromUrl();
+    if (reloadForPass(searched.card)) return;
     const state = entryState();
     // Restore the FORM and tab from this entry's snapshot (the bare landing's is landingForm
     // when set), then the RESULTS from the URL; an entry with no snapshot uses the URL.
@@ -679,6 +696,17 @@ export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRe
     // move between them too, following the URL (onResults), not `query`.
     setMobileForm(!onResults);
   });
+}
+
+/**
+ * A pass whose trains aren't the ones loaded (MAX ↔ Interrail) needs the other snapshot:
+ * open the page again so boot loads it for the URL's card. A navigation, not a reload,
+ * so the results show straight away. Returns true when it is under way.
+ */
+function reloadForPass(card: CardType): boolean {
+  if (profileForCard(card).id === deps.profile.id) return false;
+  location.assign(location.href);
+  return true;
 }
 
 /**
@@ -1070,7 +1098,7 @@ function readQueryFromForm(): SearchQuery {
           .filter((l) => l.from && l.to)
       : undefined,
     date: refs.date.value || query.date,
-    card: refs.card.value === "senior" ? "senior" : "jeune",
+    card: parseCard(refs.card.value),
     departAfter: refs.departAfter.value || undefined,
     departBefore: refs.departBefore.value || undefined,
     arriveBefore: refs.arriveBefore.value || undefined,
@@ -1751,7 +1779,7 @@ function runSearch(scrollTo?: number): void {
   // Otherwise pre-compute the heavy search primitives on the background worker so the
   // main thread stays responsive; the render then reads them straight from cache. If
   // the worker can't help, warmSearch resolves quickly and the render computes on-thread.
-  void warmSearch(deps.trains, query, today).then(() => {
+  void warmSearch(deps.trains, query, today, deps.apiBase).then(() => {
     if (token !== searchToken) return;
     paint();
   });
@@ -1874,6 +1902,10 @@ function renderSearch(): void {
 
   // MAX SENIOR free tickets are weekday-only — flag a weekend outbound, and (round trip)
   // a weekend RETURN on a later day, since either leg must be booked free.
+  // No open data says whether an Interrail seat is left: say so above every result.
+  if (!deps.profile.seatKnown) {
+    refs.results.append(el("p", { class: "notice", text: `${t("interrail_seat_notice")} ${t("how_ir_home")}` }));
+  }
   if (query.card === "senior") {
     if (isWeekend(query.date)) {
       refs.results.append(el("p", { class: "notice", text: t("senior_weekend_warn") }));
@@ -1881,6 +1913,22 @@ function renderSearch(): void {
     const retDay = query.returnDate;
     if (tripIsRound() && retDay && retDay !== query.date && isWeekend(retDay)) {
       refs.results.append(el("p", { class: "notice", text: t("senior_weekend_return_warn") }));
+    }
+  }
+
+  // An exact trip says what the train saves in CO₂ against driving or flying it.
+  if (query.mode === "od" && query.origin && query.destination) {
+    const km = stationDistanceKm(query.origin, query.destination);
+    if (Number.isFinite(km) && km >= 1) {
+      const co2 = tripCo2(Math.round(km));
+      const fmt = new Intl.NumberFormat(getLang());
+      const kg = (v: number) => fmt.format(v < 10 ? Math.round(v * 10) / 10 : Math.round(v));
+      refs.results.append(
+        el("p", {
+          class: "eco-line",
+          text: t("eco_trip", { train: kg(co2.train), car: kg(co2.car), plane: kg(co2.plane), km: fmt.format(co2.km) }),
+        }),
+      );
     }
   }
 
@@ -3810,6 +3858,9 @@ function buildLayout(root: HTMLElement): void {
     overnightMaxConnectionMin: OVERNIGHT_MAX_CONNECTION_MIN,
     jeuneUrl: MAX_JEUNE_URL,
     seniorUrl: MAX_SENIOR_URL,
+    interrailUrl: INTERRAIL_FRANCE_URL,
+    interrailPassUrl: INTERRAIL_PASS_URL,
+    ecoUrl: ADEME_CO2_URL,
     resolveStation,
     stationLabel: (id) => deps.registry.label(id),
     mode: () => query.mode,
@@ -3860,6 +3911,7 @@ function buildLayout(root: HTMLElement): void {
       store.saveSettings(settings);
       query = { ...query, card };
       store.updateUrl(query);
+      if (reloadForPass(card)) return;
       runSearch();
     },
     onShare: (onCopied) => void shareCurrentUrl(onCopied),

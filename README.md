@@ -50,6 +50,18 @@ Free, no account, open-source, and serverless — it runs entirely in your brows
 
 ---
 
+## Which pass?
+
+| Pass | Who can use it | How it works |
+| --- | --- | --- |
+| **[MAX JEUNE](https://www.sncf-connect.com/catalogue/description/max-jeune)** | 16 to 27, €79/month, 12-month minimum | €0 seats in 2nd class on TGV INOUI, OUIGO high-speed and Intercités with reservation, in France plus Luxembourg and Freiburg. Book up to 30 days ahead, 6 trips at a time, one €0 trip a day from the same station, confirm 1 to 2 days before. No €0 seats on Friday and Sunday afternoons and evenings or holiday eves. |
+| **[MAX SENIOR](https://www.sncf-connect.com/catalogue/description/max-senior)** | 60 and over, same price | Same €0 seats as MAX JEUNE. |
+| **[Interrail](https://www.interrail.com/en/interrail-passes/global-pass)** | Residents of the 33 Interrail countries (everyone else buys Eurail). Youth up to 27, senior from 60, children 4 to 11 free with a Child Pass | Any train with a pass-holder reservation (€10 to 20 on TGV, limited seats). Living in France: a Global Pass covers only one trip out of France and one trip back in, and there is no One Country Pass for your own country. |
+
+**Lower carbon.** A TGV trip emits about 50 times less CO₂ than driving alone and 100 times less than flying ([ADEME](https://impactco2.fr/outils/transport)). Each exact trip shows its own figure.
+
+---
+
 ## Why it's free
 
 Which trains have a free MAX seat is published by SNCF as open data. MAX Finder is a static frontend over it:
