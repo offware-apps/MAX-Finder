@@ -2,7 +2,9 @@ import type { RawRecord, MaxTrain, DataMeta } from "../types";
 import { parseTimeToMinutes, minutesToHHMM } from "../util/time";
 import { normalizeText } from "./stations";
 import { SNCF_PROFILE, type DatasetProfile, type RawSourceRecord } from "./profile";
-import { decodeCompact, isCompact } from "./compact";
+import { decodeCompact, isCompact, type CompactSnapshot } from "./compact";
+import type { Operator } from "./operators";
+import { setNetworkHubs } from "../core/connections";
 import sampleData from "../../data/tgvmax.sample.json";
 
 /** Accent-insensitive substring match of a station name against a pattern list. */
@@ -62,7 +64,7 @@ export interface Dataset {
   meta: DataMeta;
   /** The {@link DatasetProfile} these trains were read with (omitted = SNCF MAX). */
   profile?: DatasetProfile;
-  /** The train-api base the trains came from; empty when they came from the snapshot. */
+  /** The train-api base the trains (or some of them) came from; empty when all came from the snapshot. */
   apiBase?: string;
 }
 
@@ -122,12 +124,77 @@ async function fromTrainApi(profile: DatasetProfile, base: string, now: Date): P
 }
 
 /**
- * Load a {@link DatasetProfile}'s trains (default: SNCF MAX): from train-api at
- * `apiBase` when it answers with a fresh timetable, else the committed daily snapshot,
- * else a stale train-api timetable (offline, from the service worker's cache), else the
- * bundled sample fixture, so the app always has something to show.
+ * One other operator's timetable for a pass from train-api, or null when it is off,
+ * unreachable, malformed or entirely in the past. There is no snapshot to fall back to:
+ * without it, the pass shows SNCF's trains alone.
+ */
+async function operatorFromTrainApi(op: Operator, pass: string, base: string, now: Date): Promise<CompactSnapshot | null> {
+  try {
+    const json = await fetchJson<unknown>(`${base}/${op.id}/${pass}/all.json`, TRAIN_API_TIMEOUT_MS);
+    if (!isCompact(json)) return null;
+    const lastDate = json.dates.reduce((a, d) => (d > a ? d : a), "");
+    return lastDate >= now.toISOString().slice(0, 10) ? json : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Another operator's trains, normalized like SNCF's and tagged with the operator. A
+ * station SNCF also serves takes SNCF's id (`sncfIds`), by the operator's own mapping or
+ * by name with accents, case and punctuation aside, so journeys can change trains there.
+ */
+export function operatorTrains(
+  json: CompactSnapshot,
+  op: Operator,
+  profile: DatasetProfile,
+  sncfIds: Iterable<string>,
+): MaxTrain[] {
+  const byName = new Map<string, string>();
+  for (const id of sncfIds) byName.set(normalizeText(id), id);
+  const stations = json.stations.map((name) => op.sncfNames[name] ?? byName.get(normalizeText(name)) ?? name);
+  const rows = decodeCompact({ ...json, stations }) as unknown as RawRecord[];
+  const trains = normalizeRecords(rows, profile);
+  for (const tr of trains) tr.operator = op.id;
+  return trains;
+}
+
+/**
+ * Load a {@link DatasetProfile}'s trains (default: SNCF MAX), see {@link loadSncf}, with
+ * the trains of the profile's other operators from train-api added when they answer. A
+ * train both feeds carry (same stations, date and times) is kept once, as SNCF's.
  */
 export async function loadDataset(profile: DatasetProfile = SNCF_PROFILE, apiBase = "", now = new Date()): Promise<Dataset> {
+  const pass = profile.trainApiPass;
+  const others = Promise.all(
+    (apiBase && pass ? profile.operators ?? [] : []).map(async (op) => ({ op, json: await operatorFromTrainApi(op, pass ?? "", apiBase, now) })),
+  );
+  const dataset = await loadSncf(profile, apiBase, now);
+  let trains = dataset.trains;
+  if (!dataset.meta.isSample) {
+    const sncfIds = new Set(trains.flatMap((tr) => [tr.origin, tr.destination]));
+    const key = (tr: MaxTrain): string => `${tr.date} ${tr.origin} ${tr.destination} ${tr.depart} ${tr.arrive}`;
+    const seen = new Set(trains.map(key));
+    for (const { op, json } of await others) {
+      if (!json) continue;
+      const extra = operatorTrains(json, op, profile, sncfIds).filter((tr) => !seen.has(key(tr)));
+      trains = trains.concat(extra);
+    }
+  }
+  // The profile's interchange stations, for every search over these trains.
+  setNetworkHubs(trains, profile.hubs);
+  if (trains === dataset.trains) return dataset;
+  // Some trains came from train-api, so the search worker must read it too to hold the same.
+  return { ...dataset, trains, apiBase, meta: { ...dataset.meta, recordCount: trains.length } };
+}
+
+/**
+ * Load a profile's SNCF trains: from train-api at `apiBase` when it answers with a fresh
+ * timetable, else the committed daily snapshot, else a stale train-api timetable
+ * (offline, from the service worker's cache), else the bundled sample fixture, so the
+ * app always has something to show.
+ */
+async function loadSncf(profile: DatasetProfile, apiBase: string, now: Date): Promise<Dataset> {
   const api = await fromTrainApi(profile, apiBase, now);
   const fromApi = (a: ApiTimetable): Dataset => ({ trains: normalizeRecords(a.rows, profile), meta: a.meta, profile, apiBase });
   if (api && !api.stale) return fromApi(api);

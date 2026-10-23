@@ -1,5 +1,6 @@
 import { loadDataset, type Dataset } from "./data/dataset";
 import { SNCF_PROFILE, parseCard, profileForCard, type DatasetProfile } from "./data/profile";
+import { operatorById } from "./data/operators";
 import { StationRegistry } from "./data/stations";
 import type { CardType, SearchQuery, SearchMode, MaxTrain, Journey, SortKey, CalendarDay, StayChoice } from "./types";
 import { stayNights, stayFromNights } from "./core/roundtrip";
@@ -20,7 +21,7 @@ import {
   type Getaway,
 } from "./core/getaways";
 import { planTours, planTourInOrder, planTourGreedy, arrivalDate, type Tour } from "./core/tour";
-import { findJourneys, bestJourney, reachableJourneys, journeyArriveAbs, catchableAfter, toJourney, MAX_RESULTS } from "./core/connections";
+import { findJourneys, bestJourney, reachableJourneys, journeyArriveAbs, catchableAfter, toJourney, setNetworkHubs, MAX_RESULTS } from "./core/connections";
 import type { ConnectionOptions } from "./core/connections";
 import { availabilityCalendar, reachableCountCalendar, dateRange } from "./core/calendar";
 import { findHiddenTrains } from "./core/hidden";
@@ -394,6 +395,7 @@ function tourAddCount(): number {
 function growTour(mode: "nearest" | "random", count: number): void {
   setSurpriseMsg("");
   const avail = deps.trains.filter((tr) => tr.available);
+  setNetworkHubs(avail, deps.profile.hubs); // same interchange stations as the full timetable
   const inRegion = (id: string): boolean =>
     !query.region || deps.registry.get(id)?.region === query.region;
 
@@ -642,6 +644,7 @@ export function initApp(root: HTMLElement, dataset: Dataset, registry: StationRe
   // Every station present in the dataset becomes searchable (the curated registry
   // only covers map coordinates for the major ones).
   registry.addMissing(dataset.trains.flatMap((t) => [t.origin, t.destination]));
+  addOperatorAliases();
 
   today = new Date().toISOString().slice(0, 10);
   query = store.urlHasQuery()
@@ -769,10 +772,16 @@ function useDataset(dataset: Dataset): void {
   };
   setSeatUnknown(!deps.profile.seatKnown);
   deps.registry.setPresent(dataset.trains.flatMap((tr) => [tr.origin, tr.destination]));
+  addOperatorAliases();
   formApi.setStationLabels(deps.registry.list().map((s) => s.label));
   const updated = rootRef.querySelector(".updated");
   if (updated) updated.textContent = footerUpdatedText();
   deferFormCalRepaint();
+}
+
+/** Let "Madrid" and the like name the main station of the pass's other operators. */
+function addOperatorAliases(): void {
+  for (const op of deps.profile.operators ?? []) deps.registry.addAliases(op.aliases);
 }
 
 /** Dim the page's results under a spinner while another pass's timetable loads and searches. */
@@ -937,7 +946,8 @@ function ctx(): RenderCtx {
     formatWeekday,
     // Deep-link to SNCF Connect with the trip pre-filled (clean station names, the
     // journey date, and the departure time). Connecting trips book per-leg instead.
-    bookUrl: (origin, destination, date, time) =>
+    bookUrl: (origin, destination, date, time, operator) =>
+      operatorById(operator)?.bookingUrl ??
       generateBookingUrl(deps.registry.label(origin), deps.registry.label(destination), date, time),
     cityInfoUrl,
     onOpenRoute: (origin, destination, open) => {
