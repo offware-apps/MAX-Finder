@@ -1,6 +1,6 @@
-# How MAX Finder finds your trains
+# How Railmap finds your trains
 
-MAX Finder helps people with an SNCF "MAX JEUNE" or "MAX SENIOR" pass find trains where a reserved seat costs nothing extra. This page explains, in plain words, how the app decides which trains to show you and how it strings them into trips. No maths, just everyday pictures. Each section has a one-line intro, a real-world analogy, the actual steps, and a small diagram.
+Railmap helps people with an SNCF "MAX JEUNE" or "MAX SENIOR" pass find trains where a reserved seat costs nothing extra. This page explains, in plain words, how the app decides which trains to show you and how it strings them into trips. No maths, just everyday pictures. Each section has a one-line intro, a real-world analogy, the actual steps, and a small diagram.
 
 ---
 

@@ -1,4 +1,4 @@
-// Domain types for MAX Finder.
+// Domain types for Railmap.
 
 /** Which MAX subscription the user holds. */
 export type CardType = "jeune" | "senior";

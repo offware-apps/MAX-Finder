@@ -89,7 +89,7 @@ jobs:
           set -euo pipefail
           tag="${{ github.event.release.tag_name || github.ref_name }}"
           src=$(ls android/app/build/outputs/apk/release/*-release.apk | grep -v -- -unsigned | head -n1)
-          name="max-finder-${tag}.apk"
+          name="railmap-${tag}.apk"
           cp "$src" "$name"
           echo "name=$name" >> "$GITHUB_OUTPUT"
 

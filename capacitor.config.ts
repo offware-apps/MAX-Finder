@@ -6,7 +6,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // running `npx cap sync`.
 const config: CapacitorConfig = {
   appId: "org.maxfinder.app",
-  appName: "MAX Finder",
+  appName: "Railmap",
   webDir: "dist",
   backgroundColor: "#0f7a52",
   android: {

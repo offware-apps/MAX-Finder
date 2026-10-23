@@ -12,7 +12,7 @@ import { isNativePlatform } from "../native/capacitor";
 /**
  * Registers the service worker in production only.
  * The SW is placed at public/sw.js which Vite copies verbatim to the build
- * output at BASE_URL/sw.js, giving it scope BASE_URL (e.g. /MAX-Finder/).
+ * output at BASE_URL/sw.js, giving it scope BASE_URL (e.g. /Railmap/).
  *
  * Call this once from main.ts, e.g.:
  *   import { registerServiceWorker } from "./pwa/register";

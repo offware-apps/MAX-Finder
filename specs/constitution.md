@@ -1,4 +1,4 @@
-# Constitution — MAX Finder
+# Constitution — Railmap
 
 Non-negotiable principles that govern every decision in this project. (Spec-Driven Development,
 GitHub Spec Kit methodology.)

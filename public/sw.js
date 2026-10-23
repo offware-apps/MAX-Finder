@@ -1,7 +1,7 @@
 /**
- * Service Worker for MAX Finder PWA
+ * Service Worker for Railmap PWA
  *
- * Scope: /MAX-Finder/ (registered from that sub-path)
+ * Scope: /Railmap/ (registered from that sub-path)
  *
  * Strategies:
  *  - Navigation requests  → network-first, fallback to cached shell
@@ -16,10 +16,10 @@
 // onto the freshly deployed one.
 const CACHE_NAME = "maxjeune-v37";
 
-// Minimal app shell — paths relative to the SW's scope (/MAX-Finder/)
+// Minimal app shell — paths relative to the SW's scope (/Railmap/)
 // Vite injects a hashed index.html in the build output at the base path.
-// We store the scope root ("/MAX-Finder/") as the shell fallback URL.
-const SHELL_URL = self.registration.scope; // e.g. "https://host/MAX-Finder/"
+// We store the scope root ("/Railmap/") as the shell fallback URL.
+const SHELL_URL = self.registration.scope; // e.g. "https://host/Railmap/"
 
 // ---------------------------------------------------------------------------
 // Install — precache the app shell
