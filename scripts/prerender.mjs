@@ -18,7 +18,7 @@ const TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let p = decodeURIComponent((req.url || "/").split("?")[0]).replace(/^\/MAX-Finder\//, "/").replace(/^\/+/, "");
+  let p = decodeURIComponent((req.url || "/").split("?")[0]).replace(/^\/Railmap\//, "/").replace(/^\/+/, "");
   let file = join(DIST, p);
   if (!file.startsWith(DIST)) return res.writeHead(403).end();
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(DIST, "index.html");
@@ -27,7 +27,7 @@ const server = http.createServer((req, res) => {
   res.end(readFileSync(file));
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const BASE = `http://127.0.0.1:${server.address().port}/MAX-Finder/`;
+const BASE = `http://127.0.0.1:${server.address().port}/Railmap/`;
 
 const args = chromium.args.filter((a) => !a.startsWith("--user-data-dir") && !a.startsWith("--proxy"));
 const browser = await puppeteer.launch({
@@ -41,7 +41,7 @@ const page = await browser.newPage();
 // The snapshot is built from the committed data, never the live train-api: anything off
 // this server fails fast, so the app falls back to dist/data like the other gates.
 await page.setRequestInterception(true);
-page.on("request", (req) => (/^(data:|blob:)/.test(req.url()) || req.url().startsWith(BASE.replace(/MAX-Finder\/$/, "")) ? req.continue() : req.abort()));
+page.on("request", (req) => (/^(data:|blob:)/.test(req.url()) || req.url().startsWith(BASE.replace(/Railmap\/$/, "")) ? req.continue() : req.abort()));
 await page.evaluateOnNewDocument(() => {
   Object.defineProperty(navigator, "language", { get: () => "fr-FR" });
   Object.defineProperty(navigator, "languages", { get: () => ["fr-FR", "fr"] });

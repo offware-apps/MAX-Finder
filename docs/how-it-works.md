@@ -1,4 +1,4 @@
-# How MAX Finder Works
+# How Railmap Works
 
 A friendly tour of what this little app does, where its train data comes from, and why it can run for free forever without a server or an account.
 
@@ -8,7 +8,7 @@ A friendly tour of what this little app does, where its train data comes from, a
 
 If you hold an SNCF **MAX JEUNE** or **MAX SENIOR** pass, you can ride certain high-speed trains for free — but only if there's a special "MAX" seat still open on that train. The catch: normally you'd have to poke at the SNCF Connect booking site one station pair at a time ("Paris to Lyon? Paris to Bordeaux? Paris to Nantes?…") just to discover *where* those free seats even exist.
 
-MAX Finder flips that around. Instead of you guessing routes, it already knows every train with a free reservable seat and lets you ask big, open questions like:
+Railmap flips that around. Instead of you guessing routes, it already knows every train with a free reservable seat and lets you ask big, open questions like:
 
 > "From my city, where can I go for free this weekend?"
 
@@ -43,12 +43,12 @@ flowchart LR
 
 ## How it runs for free, forever — no server, no account
 
-Here's the part that keeps it truly free: **there is no back-end and no login.** MAX Finder is just a bundle of ordinary files — a web page, some code, and that daily data file — parked on **GitHub Pages**, GitHub's free static-file hosting.
+Here's the part that keeps it truly free: **there is no back-end and no login.** Railmap is just a bundle of ordinary files — a web page, some code, and that daily data file — parked on **GitHub Pages**, GitHub's free static-file hosting.
 
 When you open the site, *your own browser* downloads the data file and does **all** the searching right there on your device. Nothing you type is sent off to some computer in a data centre. Compare the two shapes:
 
 - **A traditional app:** your browser → a company's server → a database → back to you. Someone pays for that server every month.
-- **MAX Finder:** your browser → a static file on free hosting → and the searching happens on your own device.
+- **Railmap:** your browser → a static file on free hosting → and the searching happens on your own device.
 
 Because there's no server to keep running, there's nothing to pay for and nothing that can quietly shut down when the bill isn't paid.
 
@@ -78,11 +78,11 @@ flowchart TD
 
 ## The five things you can do
 
-MAX Finder gives you five ways to explore the same pool of free seats. Pick one from the tabs and fill in a station or two.
+Railmap gives you five ways to explore the same pool of free seats. Pick one from the tabs and fill in a station or two.
 
 ```mermaid
 flowchart TD
-  H["MAX Finder"] --> A["Where to?<br/>Pick a start,<br/>see everywhere you can go free"]
+  H["Railmap"] --> A["Where to?<br/>Pick a start,<br/>see everywhere you can go free"]
   H --> B["Where from?<br/>Pick a destination,<br/>see every free way to reach it"]
   H --> C["Exact trip<br/>One route in detail:<br/>connections plus a 30-day calendar"]
   H --> D["Tour<br/>Chain several cities<br/>into one free itinerary"]
@@ -113,7 +113,7 @@ For when you have **no fixed plan**. Pick just a starting city and it lists the 
 
 ## Your privacy
 
-MAX Finder is private by design, because there's simply nowhere for your information to go.
+Railmap is private by design, because there's simply nowhere for your information to go.
 
 - Your **pass type, language, theme, favourite routes, saved trips, and watched routes** are stored only in your browser (in local storage on your own device). They never leave it. If you clear your browser data, they're gone — that's the only way they leave.
 - Because there's no server and no account, there's nothing to log in to and no profile being built about you.

@@ -1,4 +1,4 @@
-// Domain types for MAX Finder.
+// Domain types for Railmap.
 
 /** The pass the user travels on: the two MAX subscriptions, or an Interrail pass. */
 export type CardType = "jeune" | "senior" | "interrail";

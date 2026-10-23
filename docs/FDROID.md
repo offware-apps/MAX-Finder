@@ -1,4 +1,4 @@
-# Publishing MAX Finder (GitHub Releases + F-Droid)
+# Publishing Railmap (GitHub Releases + F-Droid)
 
 There are two independent Android distribution channels. They are **signed by
 different keys**, so a user must pick one and stick with it (see
@@ -23,7 +23,7 @@ be injected by CI.
    - `versionCode` → an integer that **increases by at least 1 every release** (Android refuses to upgrade otherwise). e.g. `1` → `2`.
 2. Commit, then tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
 3. **Publish a GitHub Release** for that tag. The workflow builds, signs (if
-   secrets are set), and attaches `max-finder-v0.2.0.apk`.
+   secrets are set), and attaches `railmap-v0.2.0.apk`.
 4. **For F-Droid**, add a new build entry with the same `versionCode`/`versionName`
    to the metadata in `fdroiddata` (see below). With `UpdateCheckMode: Tags` the
    F-Droid bot will also propose this for you.
@@ -77,14 +77,14 @@ Categories:
   - Internet
   - Travel
 License: AGPL-3.0-only
-AuthorName: MAX Finder contributors
-SourceCode: https://github.com/offware-apps/MAX-Finder
-IssueTracker: https://github.com/offware-apps/MAX-Finder/issues
+AuthorName: Railmap contributors
+SourceCode: https://github.com/offware-apps/Railmap
+IssueTracker: https://github.com/offware-apps/Railmap/issues
 
-AutoName: MAX Finder
+AutoName: Railmap
 
 RepoType: git
-Repo: https://github.com/offware-apps/MAX-Finder.git
+Repo: https://github.com/offware-apps/Railmap.git
 
 Builds:
   - versionName: 0.1.0

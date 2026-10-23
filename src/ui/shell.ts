@@ -410,7 +410,7 @@ export function buildShell(props: ShellProps): ShellHandles {
     ]),
     el("p", {
       class: "muted small foot-version",
-      text: `MAX Finder v${APP_VERSION}${APP_BUILD ? ` · ${APP_BUILD}` : ""}`,
+      text: `Railmap v${APP_VERSION}${APP_BUILD ? ` · ${APP_BUILD}` : ""}`,
     }),
   ]);
 
