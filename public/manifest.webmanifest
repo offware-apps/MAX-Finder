@@ -1,22 +1,22 @@
 {
-  "name": "MAX Finder",
-  "short_name": "MAX Finder",
+  "name": "Railmap",
+  "short_name": "Railmap",
   "description": "Trouvez les places TGV Max (MAX JEUNE / MAX SENIOR) réservables — Find reservable TGVmax (MAX JEUNE / MAX SENIOR) train seats on SNCF routes.",
-  "start_url": "/MAX-Finder/",
-  "scope": "/MAX-Finder/",
+  "start_url": "/Railmap/",
+  "scope": "/Railmap/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f7a52",
   "lang": "fr",
   "icons": [
     {
-      "src": "/MAX-Finder/icons/icon.svg",
+      "src": "/Railmap/icons/icon.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/MAX-Finder/icons/maskable.svg",
+      "src": "/Railmap/icons/maskable.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"

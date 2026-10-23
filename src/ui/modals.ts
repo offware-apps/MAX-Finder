@@ -177,7 +177,7 @@ export function showSettingsModal(opts: {
       body,
       el("p", {
         class: "muted small set-version",
-        text: `MAX Finder v${APP_VERSION}${APP_BUILD ? ` · ${APP_BUILD}` : ""}`,
+        text: `Railmap v${APP_VERSION}${APP_BUILD ? ` · ${APP_BUILD}` : ""}`,
       }),
       el("div", { class: "modal-actions" }, [closeButton(dialog, "primary")]),
     ]),

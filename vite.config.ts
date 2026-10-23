@@ -6,15 +6,15 @@ import { readFileSync } from "node:fs";
 // name an exact version.
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")) as { version: string };
 
-// Project is deployed to GitHub Pages at https://<user>.github.io/MAX-Finder/
+// Project is deployed to GitHub Pages at https://<user>.github.io/Railmap/
 // so production assets must be served from that sub-path. Dev server uses "/".
 //
 // The Capacitor (native mobile) build is different: the WebView loads assets
 // from the app bundle root (capacitor://…/ or https://localhost/), so it must
-// use base "/" — a "/MAX-Finder/" prefix would 404 every asset. Select it with
+// use base "/" — a "/Railmap/" prefix would 404 every asset. Select it with
 // `vite build --mode capacitor` (see the `build:mobile` npm script).
 export default defineConfig(({ command, mode }) => ({
-  base: command === "build" && mode !== "capacitor" ? "/MAX-Finder/" : "/",
+  base: command === "build" && mode !== "capacitor" ? "/Railmap/" : "/",
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 10)),

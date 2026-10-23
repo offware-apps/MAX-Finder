@@ -30,7 +30,7 @@ const META = { updatedAt: `${DATE}T06:00:00Z`, source: "demo", recordCount: FIXT
 
 const server = http.createServer((req, res) => {
   let pathname = decodeURIComponent((req.url || "/").split("?")[0]);
-  pathname = pathname.replace(/^\/MAX-Finder\//, "/").replace(/^\/+/, "");
+  pathname = pathname.replace(/^\/Railmap\//, "/").replace(/^\/+/, "");
   let file = join(DIST, pathname);
   if (!file.startsWith(DIST)) return res.writeHead(403).end();
   if (!existsSync(file) || statSync(file).isDirectory()) file = join(DIST, "index.html");
@@ -39,7 +39,7 @@ const server = http.createServer((req, res) => {
   res.end(readFileSync(file));
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const BASE = `http://127.0.0.1:${server.address().port}/MAX-Finder/`;
+const BASE = `http://127.0.0.1:${server.address().port}/Railmap/`;
 const enc = encodeURIComponent;
 const URL = `${BASE}?mode=od&from=${enc("PARIS (intramuros)")}&to=${enc("DIJON VILLE")}&date=${DATE}&conn=0&hidden=1`;
 

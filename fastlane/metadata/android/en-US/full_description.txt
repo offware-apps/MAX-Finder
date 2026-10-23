@@ -3,7 +3,7 @@ SENIOR (ex-TGVmax) seat is currently reservable — so you don't have to probe
 station-by-station in SNCF Connect.
 
 The hard part — which trains actually have a free MAX seat — is published by SNCF
-as open data. MAX Finder is a frontend over that dataset: no backend, no account,
+as open data. Railmap is a frontend over that dataset: no backend, no account,
 no cost, no tracking. Your favorites, settings and searches live only on your
 device.
 
