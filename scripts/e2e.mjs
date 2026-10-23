@@ -765,6 +765,45 @@ await scenario(
   },
 );
 
+// 23. A pinch on the map (ctrl+wheel in Chromium/Firefox, gesture events in Safari) zooms the
+//     map and is kept from zooming the page; a plain wheel still scrolls the page.
+await scenario(
+  "map: a pinch zooms the map, not the page",
+  `${BASE}?mode=od&from=${enc(P)}&to=${enc(T)}&date=${DATE}`,
+  async (page) => {
+    assert(await until(async () => (await $count(page, ".leaflet-container .leaflet-tile")) > 0), "the map never drew");
+    // Tiles fail to load offline, but their src still names the zoom level.
+    const zoom = () =>
+      page.$$eval(".leaflet-tile", (ts) => Math.max(...ts.map((t) => +(t.src.match(/\/(\d+)\/\d+\/\d+\.png/) || [])[1])));
+    const fire = (type, init) =>
+      page.$eval(".leaflet-container", (el, type, init) => {
+        const r = el.getBoundingClientRect();
+        const opts = { bubbles: true, cancelable: true };
+        const at = { clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 };
+        const e =
+          type === "wheel"
+            ? new WheelEvent(type, { ...opts, ...at, ...init })
+            : Object.assign(new Event(type, opts), at, init); // Safari's GestureEvent, which Chromium lacks
+        el.dispatchEvent(e);
+        return e.defaultPrevented;
+      }, type, init);
+    // Let the results' fit-to-route settle first.
+    let last = -1;
+    await until(async () => { const z = await zoom(); const same = z === last; last = z; await sleep(400); return same; });
+    const z0 = await zoom();
+    assert(!(await fire("wheel", { deltaY: 100 })), "a plain wheel over the map no longer scrolls the page");
+    let kept = true;
+    for (let i = 0; i < 10; i++) kept = (await fire("wheel", { deltaY: -10, ctrlKey: true })) && kept;
+    assert(kept, "a trackpad pinch on the map was left to zoom the page");
+    assert(await until(async () => (await zoom()) > z0), "a trackpad pinch did not zoom the map in");
+    const z1 = await zoom();
+    assert(await fire("gesturestart", { scale: 1 }), "a Safari pinch on the map was left to zoom the page");
+    await fire("gesturechange", { scale: 0.4 });
+    await fire("gestureend", { scale: 0.4 });
+    assert(await until(async () => (await zoom()) < z1), "a Safari pinch did not zoom the map out");
+  },
+);
+
 // 12. PWA manifest is served and parseable, icon reference resolves.
 await scenario("pwa: manifest is served and valid JSON", BASE, async (page) => {
   const manifestHref = await page.$eval('link[rel="manifest"]', (el) => el.getAttribute("href"));
