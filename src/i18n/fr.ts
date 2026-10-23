@@ -1,5 +1,5 @@
 export const fr = {
-  appName: "MAX Finder",
+  appName: "Railmap",
   leg_add: "Ajouter un trajet",
   leg_remove: "Supprimer ce trajet",
   multi_title: "Multiville — {n} trajet(s)",
@@ -118,7 +118,7 @@ export const fr = {
   lowend_prompt_msg: "Cet appareil pourrait tourner plus léger. Couper la carte et les animations ?",
   lowend_prompt_enable: "Activer",
   update_title: "Nouvelle version",
-  update_msg: "Une nouvelle version de MAX Finder est prête.",
+  update_msg: "Une nouvelle version de Railmap est prête.",
   update_reload: "Recharger",
   act_settings: "Réglages",
   res_none_hint: "Essayez plus de correspondances, une souplesse de dates plus large, les escales de nuit, ou retirez des filtres.",

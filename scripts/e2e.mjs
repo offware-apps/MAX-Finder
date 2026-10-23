@@ -35,10 +35,10 @@ const TYPES = {
   ".txt": "text/plain", ".xml": "application/xml", ".ico": "image/x-icon",
 };
 
-// Serve dist, mirroring the GitHub-Pages /MAX-Finder/ base-path rewrite.
+// Serve dist, mirroring the GitHub-Pages /Railmap/ base-path rewrite.
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent((req.url || "/").split("?")[0])
-    .replace(/^\/MAX-Finder\//, "/")
+    .replace(/^\/Railmap\//, "/")
     .replace(/^\/+/, "");
   let file = join(DIST, p);
   if (!file.startsWith(DIST)) return res.writeHead(403).end();
@@ -52,7 +52,7 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const PORT = server.address().port;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
-const BASE = `${ORIGIN}/MAX-Finder/`;
+const BASE = `${ORIGIN}/Railmap/`;
 
 const cargs = chromium.args.filter((a) => !a.startsWith("--user-data-dir") && !a.startsWith("--proxy"));
 const browser = await puppeteer.launch({

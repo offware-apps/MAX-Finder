@@ -1,6 +1,6 @@
 # User flows
 
-The canonical map of what a user can do in MAX Finder and how each flow behaves. Keep
+The canonical map of what a user can do in Railmap and how each flow behaves. Keep
 this in sync with the app — see the rule in `AGENTS.md` ("Living documentation"): any
 change to a user-facing flow must update this file in the same PR.
 

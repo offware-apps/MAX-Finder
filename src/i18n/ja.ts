@@ -1,7 +1,7 @@
 import type { Dict } from "./fr";
 
 export const ja: Dict = {
-  appName: "MAX Finder",
+  appName: "Railmap",
   leg_add: "区間を追加",
   leg_remove: "区間を削除",
   multi_title: "周遊 — {n}区間",
@@ -116,7 +116,7 @@ export const ja: Dict = {
   lowend_prompt_msg: "この端末はより軽く動作できそうです。地図とアニメーションをオフにしますか？",
   lowend_prompt_enable: "オンにする",
   update_title: "新しいバージョン",
-  update_msg: "MAX Finder の新しいバージョンが利用できます。",
+  update_msg: "Railmap の新しいバージョンが利用できます。",
   update_reload: "再読み込み",
   act_settings: "設定",
   res_none_hint: "乗り換えを増やす、日付の柔軟性を広げる、夜行乗り継ぎを使う、フィルターを減らす、などをお試しください。",

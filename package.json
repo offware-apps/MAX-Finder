@@ -1,5 +1,5 @@
 {
-  "name": "max-finder",
+  "name": "railmap",
   "version": "0.2.0",
   "private": true,
   "description": "FOSS, serverless finder for free MAX JEUNE / MAX SENIOR (ex-TGVmax) seats, built on SNCF Open Data.",

@@ -1,7 +1,7 @@
 {
-  "name": "MAX Finder",
+  "name": "Railmap",
   "description": "Free MAX JEUNE / MAX SENIOR (ex-TGVmax) seat availability from SNCF open data. Static, serverless, no accounts.",
-  "homepage": "https://offware-apps.github.io/MAX-Finder/",
+  "homepage": "https://offware-apps.github.io/Railmap/",
   "license": "AGPL-3.0-only",
   "dataLicense": "Licence Ouverte / Open Licence",
   "notAffiliatedWith": "SNCF",
@@ -34,7 +34,7 @@
     "axe": "string (optional line/axis)"
   },
   "search": {
-    "base": "https://offware-apps.github.io/MAX-Finder/",
+    "base": "https://offware-apps.github.io/Railmap/",
     "method": "GET (query string deep-link)",
     "params": {
       "mode": [
@@ -82,10 +82,10 @@
     }
   },
   "docs": {
-    "faq": "https://offware-apps.github.io/MAX-Finder/faq/",
-    "howItWorks": "https://offware-apps.github.io/MAX-Finder/docs/how-it-works.html",
-    "algorithms": "https://offware-apps.github.io/MAX-Finder/docs/algorithms.html",
-    "llms": "https://offware-apps.github.io/MAX-Finder/llms.txt",
-    "llmsFull": "https://offware-apps.github.io/MAX-Finder/llms-full.txt"
+    "faq": "https://offware-apps.github.io/Railmap/faq/",
+    "howItWorks": "https://offware-apps.github.io/Railmap/docs/how-it-works.html",
+    "algorithms": "https://offware-apps.github.io/Railmap/docs/algorithms.html",
+    "llms": "https://offware-apps.github.io/Railmap/llms.txt",
+    "llmsFull": "https://offware-apps.github.io/Railmap/llms-full.txt"
   }
 }

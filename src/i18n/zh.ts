@@ -1,7 +1,7 @@
 import type { Dict } from "./fr";
 
 export const zh: Dict = {
-  appName: "MAX Finder",
+  appName: "Railmap",
   leg_add: "添加行程",
   leg_remove: "删除行程",
   multi_title: "多城市 — {n} 段",
@@ -116,7 +116,7 @@ export const zh: Dict = {
   lowend_prompt_msg: "此设备可以更轻量地运行。关闭地图和动画？",
   lowend_prompt_enable: "启用",
   update_title: "新版本",
-  update_msg: "MAX Finder 有新版本可用。",
+  update_msg: "Railmap 有新版本可用。",
   update_reload: "重新加载",
   act_settings: "设置",
   res_none_hint: "试试增加换乘、放宽日期弹性、开启过夜中转，或减少筛选条件。",

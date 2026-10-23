@@ -1,7 +1,7 @@
 import type { Dict } from "./fr";
 
 export const en: Dict = {
-  appName: "MAX Finder",
+  appName: "Railmap",
   leg_add: "Add another leg",
   leg_remove: "Remove leg",
   multi_title: "Multi-city — {n} leg(s)",
@@ -120,7 +120,7 @@ export const en: Dict = {
   lowend_prompt_msg: "This device looks like it could run lighter. Turn off the map and animations?",
   lowend_prompt_enable: "Enable",
   update_title: "New version",
-  update_msg: "A new version of MAX Finder is ready.",
+  update_msg: "A new version of Railmap is ready.",
   update_reload: "Reload",
   act_settings: "Settings",
   res_none_hint: "Try more connections, wider date flexibility, overnight stopovers, or removing filters.",

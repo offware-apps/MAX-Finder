@@ -1,6 +1,6 @@
-# Vision — MAX Finder
+# Vision — Railmap
 
-Where MAX Finder is today, and where it's headed. For the day-to-day of *how it
+Where Railmap is today, and where it's headed. For the day-to-day of *how it
 works now*, see [`docs/how-it-works.md`](docs/how-it-works.md) and
 [`docs/algorithms.md`](docs/algorithms.md). The non-negotiable principles live in
 [`specs/constitution.md`](specs/constitution.md).
@@ -9,7 +9,7 @@ works now*, see [`docs/how-it-works.md`](docs/how-it-works.md) and
 
 ## Today (V1): SNCF, done well
 
-MAX Finder finds SNCF trains where a free **MAX JEUNE / MAX SENIOR** seat is
+Railmap finds SNCF trains where a free **MAX JEUNE / MAX SENIOR** seat is
 reservable, from SNCF open data — Where to?, Where from?, Exact trip, Tour, Ideas,
 round trips and night trains, all serverless and account-free. **This is and stays
 the heart of the app**, and the branding stays SNCF / MAX.

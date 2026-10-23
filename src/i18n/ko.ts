@@ -1,7 +1,7 @@
 import type { Dict } from "./fr";
 
 export const ko: Dict = {
-  appName: "MAX Finder",
+  appName: "Railmap",
   leg_add: "구간 추가",
   leg_remove: "구간 삭제",
   multi_title: "다구간 — {n}개 구간",
@@ -116,7 +116,7 @@ export const ko: Dict = {
   lowend_prompt_msg: "이 기기는 더 가볍게 실행할 수 있어요. 지도와 애니메이션을 끌까요?",
   lowend_prompt_enable: "켜기",
   update_title: "새 버전",
-  update_msg: "MAX Finder의 새 버전이 준비되었습니다.",
+  update_msg: "Railmap의 새 버전이 준비되었습니다.",
   update_reload: "새로고침",
   act_settings: "설정",
   res_none_hint: "환승 횟수를 늘리거나 날짜 유연성을 넓히거나 야간 경유를 켜거나 필터를 줄여 보세요.",

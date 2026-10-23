@@ -1,7 +1,7 @@
 import type { Dict } from "./fr";
 
 export const nl: Dict = {
-  appName: "MAX Finder",
+  appName: "Railmap",
   leg_add: "Nog een traject toevoegen",
   leg_remove: "Traject verwijderen",
   multi_title: "Meerdere steden — {n} traject(en)",
@@ -116,7 +116,7 @@ export const nl: Dict = {
   lowend_prompt_msg: "Dit toestel kan lichter draaien. Kaart en animaties uitschakelen?",
   lowend_prompt_enable: "Inschakelen",
   update_title: "Nieuwe versie",
-  update_msg: "Er is een nieuwe versie van MAX Finder klaar.",
+  update_msg: "Er is een nieuwe versie van Railmap klaar.",
   update_reload: "Herladen",
   act_settings: "Instellingen",
   res_none_hint: "Probeer meer overstappen, ruimere datumflexibiliteit, nachtoverstappen of minder filters.",
