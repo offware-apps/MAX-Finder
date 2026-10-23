@@ -9,6 +9,7 @@ import {
 } from "../config";
 import type { CardType } from "../types";
 import { decodeCompact, isCompact } from "./compact";
+import { RENFE, type Operator } from "./operators";
 
 /**
  * A data-source PROFILE: everything about reading and judging ONE train dataset.
@@ -56,6 +57,8 @@ export interface DatasetProfile {
   decode?: (json: unknown) => RawSourceRecord[] | null;
   /** This pass's id in train-api (`<base>/sncf/<pass>/all.json`); omitted = snapshot only. */
   trainApiPass?: string;
+  /** Other operators whose trains this pass also takes, read from train-api alongside SNCF's. */
+  operators?: Operator[];
 }
 
 /** One raw record before normalization — shape varies per source, so it's untyped. */
@@ -106,14 +109,17 @@ export const SNCF_PROFILE: DatasetProfile = {
 };
 
 /**
- * SNCF trains for an Interrail pass holder. Every TGV INOUI, Intercités, night and
- * international train in the feed takes a pass-holder reservation, so every train that
- * runs counts. Nothing says whether a pass-holder seat is left (`seatKnown: false`),
- * and international stops are fine (no exclusions). The snapshot is the compact file.
+ * Trains for an Interrail pass holder: SNCF's, plus Renfe's from train-api. Every TGV
+ * INOUI, Intercités, night and international train in the SNCF feed takes a pass-holder
+ * reservation, so every train that runs counts. Nothing says whether a pass-holder seat
+ * is left (`seatKnown: false`), and international stops are fine (no exclusions). The
+ * snapshot is the compact file, SNCF only. Barcelona joins the two networks.
  */
 export const INTERRAIL_PROFILE: DatasetProfile = {
   ...SNCF_PROFILE,
   id: "sncf-interrail",
+  hubs: [...HUB_STATIONS, "BARCELONA SANTS", ...RENFE.hubs],
+  operators: [RENFE],
   dataUrl: INTERRAIL_DATA_URL,
   metaUrl: INTERRAIL_META_URL,
   isReservable: () => true,

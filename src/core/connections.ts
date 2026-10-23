@@ -43,6 +43,21 @@ export interface ConnectionOptions {
 export const MAX_RESULTS = 200;
 const MAX_DFS_EXPANSIONS = 400_000;
 
+// Interchange stations of each dataset (its profile's hubs), keyed by its trains array:
+// Interrail adds Barcelona and Spain's hubs to the French ones. Unregistered = HUB_STATIONS.
+const networkHubs = new WeakMap<MaxTrain[], string[]>();
+
+/** Set the stations where journeys over `trains` may change trains. */
+export function setNetworkHubs(trains: MaxTrain[], hubs: string[]): void {
+  networkHubs.set(trains, hubs);
+}
+
+/** The interchange stations for a search: the dataset's hubs, plus any the query adds (a via). */
+function hubSetFor(trains: MaxTrain[], opts: ConnectionOptions): Set<string> {
+  const base = networkHubs.get(trains) ?? HUB_STATIONS;
+  return new Set(opts.hubs ? [...base, ...opts.hubs] : base);
+}
+
 // Cache of available trains grouped by date, keyed by the (stable, loaded-once)
 // trains array. Avoids re-scanning the whole dataset on every journey lookup —
 // matters when callers run findJourneys many times (30-day calendar, best mode).
@@ -170,7 +185,7 @@ export function findJourneys(
   opts: ConnectionOptions = {},
 ): Journey[] {
   const maxConn = opts.maxConnections ?? 1;
-  const hubSet = new Set(opts.hubs ?? HUB_STATIONS);
+  const hubSet = hubSetFor(trains, opts);
   const minC = opts.minConnectionMin ?? MIN_CONNECTION_MIN;
   // Pool `span` calendar days (≥2). A multi-day span also raises the layover
   // ceiling to the span, so a hop can wait days at a hub, not just hours.
@@ -308,7 +323,7 @@ export function reachableJourneys(
   arriveCeil?: number,
 ): Map<string, Journey> {
   const maxConn = opts.maxConnections ?? 1;
-  const hubSet = new Set(opts.hubs ?? HUB_STATIONS);
+  const hubSet = hubSetFor(trains, opts);
   const minC = opts.minConnectionMin ?? MIN_CONNECTION_MIN;
   const span = Math.max(2, Math.floor(opts.spanDays ?? 2));
   const baseMaxC = opts.maxConnectionMin ?? MAX_CONNECTION_MIN;
@@ -436,7 +451,7 @@ export function latestReturns(
   opts: ConnectionOptions = {},
 ): Map<string, Journey> {
   const maxConn = opts.maxConnections ?? 1;
-  const hubSet = new Set(opts.hubs ?? HUB_STATIONS);
+  const hubSet = hubSetFor(trains, opts);
   const minC = opts.minConnectionMin ?? MIN_CONNECTION_MIN;
   const span = Math.max(2, Math.floor(opts.spanDays ?? 2));
   const baseMaxC = opts.maxConnectionMin ?? MAX_CONNECTION_MIN;
@@ -549,7 +564,7 @@ export function reachableInto(
   opts: ConnectionOptions = {},
 ): Map<string, Journey> {
   const maxConn = opts.maxConnections ?? 1;
-  const hubSet = new Set(opts.hubs ?? HUB_STATIONS);
+  const hubSet = hubSetFor(trains, opts);
   const minC = opts.minConnectionMin ?? MIN_CONNECTION_MIN;
   const span = Math.max(2, Math.floor(opts.spanDays ?? 2));
   const baseMaxC = opts.maxConnectionMin ?? MAX_CONNECTION_MIN;

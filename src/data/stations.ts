@@ -43,8 +43,10 @@ export function isAirportStation(id: string): boolean {
 
 /** Fallback display name for a station id not present in the registry. */
 export function prettyLabel(id: string): string {
-  return id
-    .replace(/\s*\(intramuros\)/i, "")
+  const name = id.replace(/\s*\(intramuros\)/i, "");
+  // Another operator's names are already written properly ("Madrid-Puerta de Atocha").
+  if (name !== name.toUpperCase()) return name;
+  return name
     .toLowerCase()
     .replace(/(^|[\s'-])([a-zà-ÿ])/g, (_m, p1: string, p2: string) => p1 + p2.toUpperCase());
 }
@@ -159,6 +161,20 @@ export class StationRegistry {
     this.extra.clear();
     this.present.clear();
     this.addMissing(ids);
+  }
+
+  /**
+   * Extra names stations answer to, by station id ("madrid" for Madrid-Puerta de Atocha),
+   * so a typed or linked city name resolves to its main station. Unknown ids are skipped.
+   */
+  addAliases(aliases: Record<string, string[]>): void {
+    this.exact = null;
+    for (const [id, names] of Object.entries(aliases)) {
+      const s = this.byId.get(id);
+      if (!s) continue;
+      this.index = this.index.filter((e) => e.station.id !== id);
+      this.add({ ...s, aliases: [...(s.aliases ?? []), ...names] });
+    }
   }
 
   get(id: string): Station | undefined {

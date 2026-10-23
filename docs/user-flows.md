@@ -222,7 +222,12 @@ the destination is reachable, with its calendar open.
   one). Both MAX passes search the MAX JEUNE
   timetable (trains with a free MAX seat; `tgvmax.json` as fallback). Interrail searches
   every train in the SNCF feed (`interrail.json` as fallback, see `src/data/compact.ts`):
-  each one takes a pass-holder reservation, international stops included. No open data says whether an Interrail seat is left, so every Interrail result
+  each one takes a pass-holder reservation, international stops included. It also reads
+  Renfe's long-distance trains from train-api (`src/data/operators.ts`; there is no
+  snapshot of them, so without train-api Interrail is SNCF only). Renfe's stations that SNCF
+  also serves take SNCF's id, and Barcelona Sants and Spain's main stations are interchange
+  hubs, so Paris → Madrid changes at Barcelona. A Renfe train books on renfe.com, and the
+  reservation-fee estimate leaves out journeys with one. No open data says whether an Interrail seat is left, so every Interrail result
   page opens with a notice saying so, and copy that would claim a free MAX seat reads its
   `<key>_ir` variant instead ("green = at least one train"). Switching between a MAX pass
   and Interrail loads the other timetable while the page stays up (the results dim under a

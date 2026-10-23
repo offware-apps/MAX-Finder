@@ -139,6 +139,7 @@ export const en: Dict = {
   lbl_dayoffset: "+{n} d",
 
   act_book: "Book on SNCF Connect",
+  act_book_on: "Book on {site}",
   act_next: "Next step",
   act_results: "Results",
   act_book_leg: "Book train {n}",
@@ -321,8 +322,8 @@ export const en: Dict = {
   fee_chip: "Reservation {fee}",
   fee_note: "Indicative Interrail reservation fees, 2nd class.",
   fee_link: "Interrail fees",
-  tagline_ir: "SNCF trains on an Interrail pass.",
-  how_note_ir: "This tool shows trains that run (SNCF open data); it can't see whether a pass-holder seat is left. Check SNCF Connect.",
+  tagline_ir: "SNCF and Renfe trains on an Interrail pass.",
+  how_note_ir: "This tool shows trains that run (SNCF and Renfe open data); it can't see whether a pass-holder seat is left. Check when you book.",
   multi_incomplete_ir: "Some legs have no train — this itinerary is incomplete.",
   tour_none_ir: "No tour for these cities and dates.",
   res_none_ir: "No train for these criteria.",
