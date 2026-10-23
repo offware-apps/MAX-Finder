@@ -180,6 +180,8 @@ export interface FormHandle {
   /** The first station field of the active Multi-city surface whose text names no
    *  station, after flagging every such field. */
   invalidStation(): HTMLInputElement | undefined;
+  /** Replace the station suggestions (another pass's timetable was loaded). */
+  setStationLabels(labels: string[]): void;
   /** Tear down date-picker popovers (which live in <body>) before the form is discarded. */
   destroy(): void;
 }
@@ -1613,6 +1615,7 @@ export function createForm(props: FormProps): FormHandle {
   return {
     form,
     refs,
+    setStationLabels: (labels) => stationList.replaceChildren(...labels.map((label) => el("option", { value: label }))),
     getTourCities: () => [...tourCities],
     setTourCities: (ids) => {
       tourCities = [...ids];

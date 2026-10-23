@@ -804,6 +804,34 @@ await scenario(
   },
 );
 
+// Switching MAX → Interrail loads the other timetable with the page still up: no
+// navigation, a "Loading…" pill over dimmed results, then the Interrail results.
+await scenario(
+  "pass: switching to Interrail swaps the timetable in place, without reloading",
+  `${BASE}?mode=od&from=${enc(P)}&to=${enc(L)}&date=${RT_DATE}`,
+  async (page) => {
+    assert(await until(async () => (await $count(page, "article.journey")) > 0), "precondition: no MAX results");
+    await page.evaluate(() => {
+      window.__samePage = true;
+    });
+    await page.select(".header-quick select", "interrail");
+    assert(await until(async () => urlParam(page, "card") === "interrail"), "the URL did not take card=interrail");
+    const swapped = await until(async () =>
+      (await $count(page, ".pass-spinner")) === 0 &&
+      (await $count(page, ".results .notice")) > 0 &&
+      (await $count(page, "article.journey")) > 0
+        ? true
+        : null,
+    );
+    assert(swapped, `Interrail results did not show (results "${(await $text(page, ".results"))?.slice(0, 80)}")`);
+    assert(await page.evaluate(() => window.__samePage === true), "the page reloaded");
+    // And back: the MAX timetable is already loaded, so it shows without a pill.
+    await page.select(".header-quick select", "jeune");
+    assert(await until(async () => (await $count(page, ".results .notice")) === 0 && (await $count(page, "article.journey")) > 0), "MAX results did not come back");
+    assert(await page.evaluate(() => window.__samePage === true), "the page reloaded going back to MAX");
+  },
+);
+
 // 12. PWA manifest is served and parseable, icon reference resolves.
 await scenario("pwa: manifest is served and valid JSON", BASE, async (page) => {
   const manifestHref = await page.$eval('link[rel="manifest"]', (el) => el.getAttribute("href"));

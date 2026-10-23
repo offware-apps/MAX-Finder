@@ -225,8 +225,9 @@ the destination is reachable, with its calendar open.
   each one takes a pass-holder reservation, international stops included. No open data says whether an Interrail seat is left, so every Interrail result
   page opens with a notice saying so, and copy that would claim a free MAX seat reads its
   `<key>_ir` variant instead ("green = at least one train"). Switching between a MAX pass
-  and Interrail opens the page again on the other snapshot, results shown straight away;
-  switching between the two MAX passes re-runs in place. Booking still opens SNCF Connect,
+  and Interrail loads the other timetable while the page stays up (the results dim under a
+  "Loading…" pill), then re-runs the search; each timetable loads once per visit, so switching
+  back is instant. Switching between the two MAX passes re-runs straight away. Booking still opens SNCF Connect,
   where pass-holder reservations are sold; "How does it work?" links Interrail's page on
   French reservations. A `card=interrail` link loads the Interrail snapshot at boot.
   "How does it work?" lists who can use each pass and its rules (MAX JEUNE 16 to 27,
