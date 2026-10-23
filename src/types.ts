@@ -163,7 +163,7 @@ export interface SearchQuery {
 }
 
 /** Result ordering for the destination / ideas lists. */
-export type SortKey = "rec" | "trains" | "days" | "closest" | "fastest" | "name" | "arrival" | "departure";
+export type SortKey = "rec" | "trains" | "days" | "closest" | "fastest" | "name" | "arrival" | "departure" | "cheapest";
 
 /** A direct or multi-leg (1..3 legs) journey. */
 export interface Journey {

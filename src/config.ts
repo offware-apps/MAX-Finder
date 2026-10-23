@@ -82,6 +82,9 @@ export const MAX_SENIOR_URL = "https://www.sncf-connect.com/catalogue/descriptio
 export const INTERRAIL_FRANCE_URL = "https://www.interrail.com/en/plan-your-trip/reservations/reservations-france";
 /** Interrail Global Pass conditions: who can buy it, and the country-of-residence rule. */
 export const INTERRAIL_PASS_URL = "https://www.interrail.com/en/interrail-passes/global-pass";
+/** Interrail's pass-holder reservation fees, the source of src/data/fees.ts. */
+export const INTERRAIL_FEES_URL =
+  "https://www.interrail.com/en/book-reservations/reservation-fees/domestic-train-reservation-fees";
 /** ADEME's CO₂ comparator, the source of the per-km factors in src/util/eco.ts. */
 export const ADEME_CO2_URL = "https://impactco2.fr/outils/transport";
 

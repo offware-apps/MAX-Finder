@@ -1992,6 +1992,17 @@ a {
   color: var(--muted);
   font-size: 0.83rem;
 }
+/* The route chip and, when turned on, the Interrail reservation fee beside it. */
+.journey-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.chip-fee {
+  color: var(--text);
+}
 .legs {
   display: flex;
   flex-direction: column;

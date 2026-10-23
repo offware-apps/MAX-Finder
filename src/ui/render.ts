@@ -9,7 +9,8 @@ import { el } from "./dom";
 import { isNightTrain } from "../core/search";
 import { isAirportStation } from "../data/stations";
 import { formatDuration, dayIndex, addDays } from "../util/time";
-import { t } from "../i18n";
+import { t, getLang } from "../i18n";
+import { formatFee, type Fee } from "../data/fees";
 
 // Monotonic id source for wiring aria-labelledby (a calendar's <h3> to its grid).
 let uidSeq = 0;
@@ -36,6 +37,8 @@ export interface RenderCtx {
   onIcs: (journey: Journey) => void;
   /** Open the step-by-step "book each train" modal for a connecting journey. */
   onBookSteps: (journey: Journey) => void;
+  /** A journey's Interrail reservation fees, set only when the traveller turned them on. */
+  fee?: (journey: Journey) => Fee | undefined;
   isFavorite: (route: RoutePair) => boolean;
   onToggleFavorite: (route: RoutePair) => void;
   /** Whether this trip (one-way, or a round trip with `inbound`) is saved. */
@@ -592,12 +595,18 @@ function journeyBodyEl(j: Journey, ctx: RenderCtx, label?: string, dateLabel?: s
           class: "chip chip-via",
           text: t("lbl_via", { hub: j.hubs.map((h) => ctx.label(h)).join(", ") }),
         });
+  const fee = ctx.fee?.(j);
   const head = el("div", { class: "journey-head" }, [
     ...(label ? [el("h3", { class: "trip-leg-title", text: label })] : []),
     // With flexible dates the list spans several days, so each card carries its own
     // date (otherwise which day a proposition is for is lost). Leads the head.
     ...(dateLabel ? [el("span", { class: "chip chip-date", text: dateLabel })] : []),
-    tag,
+    fee
+      ? el("span", { class: "journey-tags" }, [
+          tag,
+          el("span", { class: "chip chip-fee", text: t("fee_chip", { fee: formatFee(fee, getLang()) }) }),
+        ])
+      : tag,
     el("span", { class: "journey-total" }, [icon(I.clock), el("span", { text: formatDuration(j.totalDurationMin) })]),
   ]);
   return el("div", { class: "journey-body" }, [head, legs]);
